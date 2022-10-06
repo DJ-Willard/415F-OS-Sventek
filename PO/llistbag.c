@@ -42,7 +42,7 @@ static void **b_toArray(const Bag *b, long *len) {
     return NULL;
 }
 
-const Iterator *b_itCreate(const Bag *b) {
+static const Iterator *b_itCreate(const Bag *b) {
     return NULL;
 }
 
