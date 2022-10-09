@@ -150,7 +150,6 @@ static  void resize(BData *bd)
             array[j] = p;
         }
     }
-    
     free(bd->buckets);
     bd->buckets = array;
     bd->capacity = N;
@@ -257,16 +256,17 @@ static long b_size(const Bag *b)
 static long b_count(const Bag *b, void *member) 
 {
     BData *bd = (BData *)b->self;
-    long cnt;
+    long cnt = 0L;
     long i;
     Node *p = findElemt(bd,member,&i);
 
     while(p != NULL)
     {
-        if(bd->cmpF((p->entry).elemt, member))
+        if(bd->cmpF((p->entry).elemt, member) == 0)
         {
             cnt ++;
         }
+        p = p->next;
     }
     
     return cnt;
