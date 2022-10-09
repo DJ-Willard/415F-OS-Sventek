@@ -9,7 +9,6 @@
 //#define DEFAULT_CAPACITY 16 // given
 #define MAX_CAPACITY 134217728L
 //#define DEFAULT_LOAD_FACTOR 0.75  // given
-#define TRIGGER 100 // number of changes to trigger a load check for book
 
 
 
@@ -40,7 +39,6 @@ typedef struct b_data
     int (*cmpF)(void *, void *);
     long size;
     long capacity;
-    long changes; //measure changes before load check
     double load;
     double loadFactor;
     double increment;
@@ -89,7 +87,6 @@ static void b_clear(const Bag *b)
     purge(bd);
     bd->size = 0;
     bd->load = 0.0;
-    bd->changes = 0;
 }
 //local fuction// fuction find element form the hash fuction and into the link list
 static Node *findElemt(BData *bd, void *member, long *bucket)
@@ -111,7 +108,7 @@ static Node *findElemt(BData *bd, void *member, long *bucket)
 //helper fuction// resizes hash table if tigger needed in add
 static  void resize(BData *bd)
 {
-    int N;
+    long N;
     Node *p;
     Node *q;
     Node **array;
@@ -150,13 +147,14 @@ static  void resize(BData *bd)
             q = p->next;
             j = bd->hash((p->entry).elemt,N);
             p->next = array[j];
+            array[j] = p;
         }
     }
+    
     free(bd->buckets);
     bd->buckets = array;
     bd->capacity = N;
     bd->load /= 2.0;
-    bd->changes = 0;
     bd->increment = 1.0/(double)N;
 }
 
@@ -173,7 +171,6 @@ static bool insertEntry(BData *bd, void *elemt, long i)
         bd->buckets[i] = p;
         bd->size++;
         bd->load += bd->increment;
-        bd->changes ++;
     }
     return status;
 }
@@ -185,30 +182,15 @@ static bool b_add(const Bag *b, void *member)
 {
     BData *bd = (BData *)b->self;
     long i;
-    Node *p;
     int status = false;
 
-    if(bd->changes > TRIGGER)
+    if(bd->load > bd->loadFactor) // trigger resize
     {
-        bd->changes = 0;
-        if(bd->load > bd->loadFactor)
-        {
             resize(bd);
-        }
     }
 
-    p = findElemt(bd, member, &i);
-    if(p != NULL)
-    {
-        bd->freeV((p->entry).elemt);
-        //do i need to creat or increment 
-        (p->entry).elemt = member;
-        status = true;
-    }
-    else
-    {
-     status = insertEntry(bd, member, i);   
-    }
+    i = bd->hash(member,bd->capacity);
+    status = insertEntry(bd, member, i);   
 
     return status;
 }
@@ -244,16 +226,22 @@ static bool b_remove(const Bag *b, void *member)
         {
             ;
         }
+        
         if(p==NULL)
+        {
             bd->buckets[i] = entry->next;
+        }
         else
+        {
             p->next = entry->next;
+        }
+        
         bd->size--;
         bd->load -= bd->increment;
-        bd->changes++;
         bd->freeV((entry->entry).elemt);
         free(entry);
-        }
+    }
+    
     return status;
 }
 
@@ -270,8 +258,18 @@ static long b_count(const Bag *b, void *member)
 {
     BData *bd = (BData *)b->self;
     long cnt;
+    long i;
+    Node *p = findElemt(bd,member,&i);
+
+    while(p != NULL)
+    {
+        if(bd->cmpF((p->entry).elemt, member))
+        {
+            cnt ++;
+        }
+    }
     
-	return 0L;
+    return cnt;
 }
 
 
@@ -306,45 +304,13 @@ static void **elemts(BData *bd)
     return tmp;
 }
 
-//helper fuction// generating an array of BEntry *form the bag
-// returns pointer to the arry or null if malloc falis
-static Bentry **entries(BData *bd)
-{
-    Bentry **tmp = NULL;
-
-    if(bd->size > 0L)
-    {
-        size_t nbytes = bd->size * sizeof(Bentry *);
-        tmp = (Bentry **)malloc(nbytes);
-
-        if(tmp != NULL)
-        {
-            long i;
-            long n = 0L;
-
-            for(i = 0L; i < bd->capacity; i++)
-            {
-                Node *p = bd->buckets[i];
-
-                while(p != NULL)
-                {
-                    tmp[n++] = &(p->entry);
-                    p = p->next;
-                }
-            }
-        }
-    }
-
-    return tmp;
-}
-
 //given// Returns  the elemt of the bag as an array of void* pointers in arbitrart order
 // returns a pointer of the array or null if error
 // returns the number of elemt in the array in *len
 static void **b_toArray(const Bag *b, long *len) 
 {
     BData *bd = (BData *)b->self;
-    Bentry **tmp = entries(bd);
+    void **tmp = elemts(bd);
 
     if(tmp != NULL)
     {
@@ -361,7 +327,7 @@ static const Iterator *b_itCreate(const Bag *b)
 {
     BData *bd = (BData *)b->self;
     const Iterator *it = NULL;
-    void **tmp = (void **)entries(bd);
+    void **tmp = (void **)elemts(bd);
 
     if(tmp != NULL)
     {
@@ -404,12 +370,14 @@ static const Bag *newBag(int (*cmpF)(void*,void*), void (*freeV)(void*),
             {
                 bd->capacity = N;
                 bd->size = 0L;
-                bd->changes = 0L;
                 bd->loadFactor = LF;
                 bd->load = 0.0;
                 bd->increment = 1.0/(double)N;
                 bd->freeV = freeV;
                 bd->buckets = array;
+                bd->hash = hash;
+                bd->cmpF = cmpF;
+
 
                 for(i=0; i <N; i++)
                 {
