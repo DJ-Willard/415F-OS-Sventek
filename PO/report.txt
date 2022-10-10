@@ -1,0 +1,24 @@
+Student: Daniel Willard 
+Duckid: dwillar4
+Implimentation: Hash table (hashmap.c)
+
+Help Recieved:
+
+James Taylor: Talk about big idea of how the bag worked, reccommended pg 379 in book.
+
+Adam Case: Looked over my code with me and as I explained my implimentation 
+and parts for the book. He help to refesh me skills of understanding C as well as pointing out areas where I 
+had implemented to much logic form a hash map and then had me explain my goal and how I would impliment and then
+he would ask pointed question to get me to fix me code.
+He tutuored me though being out of pactice in C.
+
+Gabriel Peery: asked for help on errors in my logic for the add fuction whiteborded psudocode.
+
+Turan Bulut: Asked about errors in my logic count logic talked though a method I ended up not useing.
+
+recieved add for the fallowing resources:
+https://www.cs.usfca.edu/~galles/visualization/OpenHash.html
+https://visualgo.net/en/list
+
+Primary reasouce for my code:
+pg 379 pg 291-324 chapter 12 (12.4, 12.5)
