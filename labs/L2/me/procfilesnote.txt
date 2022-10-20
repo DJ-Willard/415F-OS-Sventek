@@ -1,0 +1,157 @@
+only on linux
+top is not a prvividle process
+
+proc file system 
+
+proc file are formated
+/proc/pid/name
+e@cs-virtualbox:~/415F-OS-Sventek/labs/L2$ more /proc/17079/cmdline
+sleep600
+me@cs-virtualbox:~/415F-OS-Sventek/labs/L2$ top
+
+
+// know how to read stat
+
+me@cs-virtualbox:~/415F-OS-Sventek/labs/L2$ more /proc/17079/stat
+17079 (sleep) S 16182 17079 16182 34817 17090 1077936128 119 0 2 0 0 0 0 0 20 0 1 0 118
+95631 5431296 144 18446744073709551615 94486704893952 94486704910697 140732185547200 0 
+0 0 0 0 0 0 0 0 17 0 0 0 0 0 0 94486704930096 94486704931328 94486721056768 14073218555
+6074 140732185556084 140732185556084 140732185559017 0
+me@cs-virtualbox:~/415F-OS-Sventek/labs/L2$ 
+
+
+the verbose is here.
+
+Name:	sleep
+Umask:	0022
+State:	S (sleeping)
+Tgid:	17079
+Ngid:	0
+Pid:	17079
+PPid:	16182
+TracerPid:	0
+Uid:	1000	1000	1000	1000
+Gid:	1000	1000	1000	1000
+FDSize:	256
+Groups:	24 25 27 29 30 44 46 108 113 119 122 1000 
+NStgid:	17079
+NSpid:	17079
+NSpgid:	17079
+NSsid:	16182
+VmPeak:	    5304 kB
+VmSize:	    5304 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	     576 kB
+VmRSS:	     576 kB
+RssAnon:	      68 kB
+RssFile:	     508 kB
+RssShmem:	       0 kB
+VmData:	     180 kB
+VmStk:	     132 kB
+VmExe:	      20 kB
+VmLib:	    1460 kB
+VmPTE:	      48 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+Threads:	1
+SigQ:	0/7734
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000000000
+SigCgt:	0000000000000000
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	000001ffffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+Speculation_Store_Bypass:	vulnerable
+Cpus_allowed:	1
+Cpus_allowed_list:	0
+Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000
+,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000
+000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00
+000000,00000000,00000000,00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	3
+nonvoluntary_ctxt_switches:	0
+
+
+
+me@cs-virtualbox:~/415F-OS-Sventek/labs/L2$ more /proc/17079/io
+rchar: 2300
+wchar: 0
+syscr: 7
+syscw: 0
+read_bytes: 45056
+write_bytes: 0
+cancelled_write_bytes: 0
+
+
+//not in p1 but later
+me@cs-virtualbox:~/415F-OS-Sventek/labs/L2$ more /proc/17079/maps
+55ef667b1000-55ef667b3000 r--p 00000000 08:01 787586                     /usr/bin/sleep
+55ef667b3000-55ef667b8000 r-xp 00002000 08:01 787586                     /usr/bin/sleep
+55ef667b8000-55ef667bb000 r--p 00007000 08:01 787586                     /usr/bin/sleep
+55ef667bb000-55ef667bc000 r--p 00009000 08:01 787586                     /usr/bin/sleep
+55ef667bc000-55ef667bd000 rw-p 0000a000 08:01 787586                     /usr/bin/sleep
+55ef6771d000-55ef6773e000 rw-p 00000000 00:00 0                          [heap]
+7fe651595000-7fe65187c000 r--p 00000000 08:01 812675                     /usr/lib/local
+e/locale-archive
+7fe65187c000-7fe6518a1000 r--p 00000000 08:01 799869                     /usr/lib/x86_6
+4-linux-gnu/libc-2.31.so
+7fe6518a1000-7fe6519ec000 r-xp 00025000 08:01 799869                     /usr/lib/x86_6
+4-linux-gnu/libc-2.31.so
+7fe6519ec000-7fe651a36000 r--p 00170000 08:01 799869                     /usr/lib/x86_6
+4-linux-gnu/libc-2.31.so
+7fe651a36000-7fe651a37000 ---p 001ba000 08:01 799869                     /usr/lib/x86_6
+4-linux-gnu/libc-2.31.so
+7fe651a37000-7fe651a3a000 r--p 001ba000 08:01 799869                     /usr/lib/x86_6
+4-linux-gnu/libc-2.31.so
+7fe651a3a000-7fe651a3d000 rw-p 001bd000 08:01 799869                     /usr/lib/x86_6
+4-linux-gnu/libc-2.31.so
+7fe651a3d000-7fe651a43000 rw-p 00000000 00:00 0 
+7fe651a59000-7fe651a5a000 r--p 00000000 08:01 799569                     /usr/lib/x86_6
+4-linux-gnu/ld-2.31.so
+7fe651a5a000-7fe651a7a000 r-xp 00001000 08:01 799569                     /usr/lib/x86_6
+4-linux-gnu/ld-2.31.so
+7fe651a7a000-7fe651a82000 r--p 00021000 08:01 799569                     /usr/lib/x86_6
+4-linux-gnu/ld-2.31.so
+7fe651a83000-7fe651a84000 r--p 00029000 08:01 799569                     /usr/lib/x86_6
+4-linux-gnu/ld-2.31.so
+7fe651a84000-7fe651a85000 rw-p 0002a000 08:01 799569                     /usr/lib/x86_6
+4-linux-gnu/ld-2.31.so
+7fe651a85000-7fe651a86000 rw-p 00000000 00:00 0 
+7ffec3ebb000-7ffec3edc000 rw-p 00000000 00:00 0                          [stack]
+7ffec3fca000-7ffec3fce000 r--p 00000000 00:00 0                          [vvar]
+7ffec3fce000-7ffec3fd0000 r-xp 00000000 00:00 0                          [vdso]
+
+
+more /proc/17079/exe
+
+******** /proc/17079/exe: Not a text file ********
+
+
+me@cs-virtualbox:~/415F-OS-Sventek/labs/L2$ ls -l  /proc/17079/exe
+lrwxrwxrwx 1 me me 0 Oct 13 10:49 /proc/17079/exe -> /usr/bin/sleep
+
+
+
+p1 write into calumons
+
+
+if you open must close
+
+if it fails there is nothing it dies
+
+if you git line and it fails process is dead
+
+write a smal program
+
+fors a child and execs a no process and then learn to read it.
