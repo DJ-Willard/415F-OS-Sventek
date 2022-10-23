@@ -50,8 +50,9 @@ int main( int argc, char *argv[])
 	struct timeval t1;
 	struct timeval t2;
 	long long musecs;
-	char time[SIZE] = ""; //formatedsting
-	char sec[SIZE] = ""; //the foramted sting
+	char times[SIZE] = ""; //the foramted stings
+	char timed[SIZE] = "";
+	char sec[SIZE] = "";
 	char dsecs[SIZE] = ""; // decial part of secounds
 	//get opt var / err var
 	int npro;
@@ -67,7 +68,9 @@ int main( int argc, char *argv[])
 	char errout[SIZE] = "";
 	char stdout[SIZE] = "";
 	char word[SIZE] = "";
-	char 
+	char copies[SIZE] = "";
+	char pcessor[SIZE] = "";
+	char finout[SIZE] = "";	
 	//fork and exec var
 	pid_t pid;
 	int status;
@@ -283,25 +286,37 @@ int main( int argc, char *argv[])
 			default:  // in parent process
 					p1strcat(stdout,"Parent: waiting for ");
 					p1itoa(pid,pidVstr);
-					p1strcat(stdout, p1strpack(pidVstr, -8, ' ', buf));
+					p1strpack(pidVstr, -8, '_', buf);
+					p1strcat(stdout, buf);
 					p1strcat(stdout, " to complete\n");
 					p1putstr(1, stdout);
 					(void) wait(&status); // wiat for child
 		}
 	}
 //4) Note the current time (stop)
-
+	gettimeofday(&t2,NULL);
 //5) Compute the elapsed time (stop - start) that it took for all of the processes to complete their processing and display on standard output1	
-	//time
-	//sec
-	//decs
 	musecs = 1000000 *(t2.tv_sec-t1.tv_sec) + (t2.tv_usec-t1.tv_usec);
-	p1strcat(time, "The elased time to execute: ");
+	p1strcat(finout, "The elased time to execute ");
+	p1itoa(npro, copies);
+	p1strcat(finout,copies);
+	p1strcat(finout, " compies of [");
+	p1strcat(finout, args[0]);
+	p1strcat(finout, "] on ");
+	p1itoa(ncor,pcessor);
+	p1strcat(finout,pcessor);
+	p1strcat(finout," processors is ");
+	p1itoa((int)(musecs/1000000), sec);
+	p1itoa((int)(musecs%1000000), dsecs);
+	p1strpack(sec,-7,'0', times);
+	p1strpack(sec,3,'0', timed);
+	p1strcat(finout, times);
+	p1strcat(finout, ".");
+	p1strcat(finout, timed);
+	p1strcat(finout, "sec\n");
+	p1putstr(1,finout);
 
-
-
-	/// museces = musecs/1000.int musecs%1000
-//6) Exit //must catch failing point is ERRCK
+//6) Exit //must catch failing point in ERRCK //FREE
 	for(i = 0; i <cnt +1; i++)
 	{
 		free(args[i]);
