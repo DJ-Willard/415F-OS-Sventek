@@ -9,6 +9,7 @@
 
 #define UNUSED __attribute__((unused))
 #define USEAGE "usage: ./THv? [-q <msec>] [-p <nprocesses>] [-c <ncores>] -l 'command line' \n"
+#define SIZE 4096 // max bash output size
 int volatile npro = 0;
 
 
@@ -49,9 +50,9 @@ int main( int argc, char *argv[])
 	struct timeval t1;
 	struct timeval t2;
 	long long musecs;
-	char *time; //formatedsting
-	char *sec; //the foramted sting
-	char *decs; // decial part of secounds
+	char time[SIZE] = ""; //formatedsting
+	char sec[SIZE] = ""; //the foramted sting
+	char dsecs[SIZE] = ""; // decial part of secounds
 	//get opt var / err var
 	int npro;
 	int ncor;
@@ -61,11 +62,12 @@ int main( int argc, char *argv[])
 	int Qflag, Pflag, Cflag, Lflag;
 	char *qf, *pf, *cf , *cmdLine;
 	//file / command var;
-	char *buf;
-	char *pidVstr;
-	char *errout;
-	char *stdout;
-	char word[4096];
+	char buf[SIZE] = "";
+	char pidVstr[SIZE] = "";
+	char errout[SIZE] = "";
+	char stdout[SIZE] = "";
+	char word[SIZE] = "";
+	char 
 	//fork and exec var
 	pid_t pid;
 	int status;
@@ -83,13 +85,10 @@ int main( int argc, char *argv[])
 	ncor = -1;
 	q = -1;
 	musecs = 0;
-	cmdLine = "";
-	buf = "";
-	pidVstr = "";
-	time = "";
-	decs = "";
-	errout = "";
-	stdout ="";
+	qf = NULL;
+	pf = NULL;
+	cf = NULL;
+	cmdLine = NULL;
 	Qflag = 0,Pflag = 0,Cflag = 0,Lflag = 0; // set to false 
 
 
@@ -251,7 +250,7 @@ int main( int argc, char *argv[])
 			j++;
 		}
 	}
-	args[j+1] = NULL;
+	args[j] = NULL;
 //1) Note the current time (start)
 	gettimeofday(&t1,NULL);
 //2) Launch ‘nprocesses’ processes executing ‘command’ using fork(), execvp(), and any other required system calls. To make things simpler, assume that the programs will run in the same environment as used by TH.
@@ -282,29 +281,27 @@ int main( int argc, char *argv[])
 					return EXIT_FAILURE;
 			 		break;
 			default:  // in parent process
-					p1strcat(stdout, "Parent: waiting for ");
-					//p1itoa(pid,pidVstr);
-					//p1strcat(stdout, p1strpack(pidVstr, -8, ' ', buf));
-					//p1strcat(stdout, " to complete\n");
+					p1strcat(stdout,"Parent: waiting for ");
+					p1itoa(pid,pidVstr);
+					p1strcat(stdout, p1strpack(pidVstr, -8, ' ', buf));
+					p1strcat(stdout, " to complete\n");
 					p1putstr(1, stdout);
-					printf("Wiating on child \n");
 					(void) wait(&status); // wiat for child
 		}
 	}
 //4) Note the current time (stop)
-	gettimeofday(&t2,NULL);
+
 //5) Compute the elapsed time (stop - start) that it took for all of the processes to complete their processing and display on standard output1	
-	/*musecs = 1000000 *(t2.tv_sec-t1.tv_sec) + (t2.tv_usec-t1.tv_usec);
-	p1strcat(sec, "Elapsed Time: ");
-	p1itoa((int)(musecs/1000000, buf)
-	p1srtcat(sec, ;
-	p1itoa((int)(musecs%1000000), wms);
-	p1strpack(wms, -3, '0', buf);
-	p1putstr(2, "ms\n");*/
+	//time
+	//sec
+	//decs
+	musecs = 1000000 *(t2.tv_sec-t1.tv_sec) + (t2.tv_usec-t1.tv_usec);
+	p1strcat(time, "The elased time to execute: ");
+
 
 
 	/// museces = musecs/1000.int musecs%1000
-//6) Exit //must catch failing point is ERRCK*/
+//6) Exit //must catch failing point is ERRCK
 	for(i = 0; i <cnt +1; i++)
 	{
 		free(args[i]);
