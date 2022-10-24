@@ -1,4 +1,4 @@
-CFLAGS=-W -Wall
+CFLAGS=-g -W -Wall
 PROGRAMS=cpubound iobound thv1 thv2 thv3 thv4
 
 all: $(PROGRAMS)
@@ -13,7 +13,7 @@ thv1: thv1.o p1fxns.o
 	gcc -o $@ $^
 
 thv2: thv2.o p1fxns.o
-	gcc -o $@ $^
+	gcc -g -o $@ $^
 
 thv3: thv3.o p1fxns.o
 	gcc -o $@ $^

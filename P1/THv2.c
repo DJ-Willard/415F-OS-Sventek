@@ -12,7 +12,13 @@
 #define USEAGE "usage: ./THv? [-q <msec>] [-p <nprocesses>] [-c <ncores>] -l 'command line' \n"
 #define SIZE 4096 // max bash output size
 int volatile npro = 0;
+int volatile nprostp = 0;
+int volatile nproact = 0;
 bool volatile USR1_seen = false;
+int volatile nprunning = 0;
+int volatile npstp = 0;
+int volatile npdead = 0;
+
 
 void onusr2(UNUSED int sig)
 {
@@ -33,8 +39,7 @@ void onchld(UNUSED int sig)
 	{
 		if(WIFEXITED(status) || WIFSIGNALED(status)) // marco in other file
 		{
-			npro--;
-			kill(pid, SIGUSR2);
+			kill(pid,SIGUSR2);
 		}
 		if(WIFSTOPPED(status))
 		{
@@ -42,7 +47,8 @@ void onchld(UNUSED int sig)
 		}
 		if(WIFCONTINUED(status))
 		{
-			
+			nproact++;
+			nprostp--;
 		}
 	}
 }
@@ -53,7 +59,7 @@ int main( int argc, char *argv[])
 	//get opt extern vars
 	extern char *optarg;
 	extern int optind;
-	//timme var
+	//time var
 	struct timeval t1;
 	struct timeval t2;
 	long long musecs;
@@ -74,12 +80,12 @@ int main( int argc, char *argv[])
 	char buf[SIZE] = "";
 	char pidVstr[SIZE] = "";
 	char errout[SIZE] = "";
-	char stdout[SIZE] = "";
+	char putout[SIZE] = "";
 	char word[SIZE] = "";
 	char copies[SIZE] = "";
 	char pcessor[SIZE] = "";
 	char finout[SIZE] = "";	
-	//fork and exec var
+	//fork and exec singal
 	pid_t pid;
 	int status;
 	int pidcnt;
@@ -92,7 +98,6 @@ int main( int argc, char *argv[])
 	i = 0;//iterrators
 	fli = 0;//*
 	j = 0; //iterrators
-	pidcnt = 0;
 	cmdlen = 0;
 	npro = -1;
 	ncor = -1;
@@ -102,11 +107,12 @@ int main( int argc, char *argv[])
 	pf = NULL;
 	cf = NULL;
 	cmdLine = NULL;
+	pidcnt = 0;
 	Qflag = 0,Pflag = 0,Cflag = 0,Lflag = 0; // set to false 
 
 
 //FLAGCK) flag cheak aand asssing falg value
-	// use getopt extern char *optarg, int optind, opterr, optopt; 
+// use getopt extern char *optarg, int optind, opterr, optopt; 
 	while((opt = getopt(argc, argv, "q:p:c:l:")) != -1)
 	{
 		switch(opt)
@@ -263,7 +269,6 @@ int main( int argc, char *argv[])
 	}
 	args[j] = NULL;
 
-
 	int *pidarr = (int *)malloc(npro*sizeof(int));
 
 	//signal(SIGCHLD, onchld);
@@ -273,6 +278,7 @@ int main( int argc, char *argv[])
 		p1perror(2, errout);
 		return EXIT_FAILURE;
 	}
+	signal(SIGUSR2, onusr2);
 	for (i = 0; i < npro; i++) 
 	{
 		pid = fork();
@@ -297,6 +303,8 @@ int main( int argc, char *argv[])
 					{
 						(void)nanosleep(&ms20, NULL);
 					}
+					p1strcat(putout,"SIGUSR1 received\n");
+					p1putstr(1, putout);
 					execvp(args[0], args);
 					p1strcat(errout, "Child: Unable to exec ");
 					p1strcat(errout, args[0]);
@@ -305,36 +313,43 @@ int main( int argc, char *argv[])
 					return EXIT_FAILURE;
 			 		break;
 			default:  // in parent process
-					p1strcat(stdout,"Parent: waiting for ");
+					p1strcat(putout,"Parent: waiting for ");
 					p1itoa(pid,pidVstr);
+					pidarr[pidcnt] = pid;
+					pidcnt++;
 					p1strpack(pidVstr, -8, '_', buf);
-					p1strcat(stdout, buf);
-					p1strcat(stdout, " to complete\n");
-					p1putstr(1, stdout);
+					p1strcat(putout, buf);
+					p1strcat(putout, " to complete\n");
+					p1putstr(1, putout);
+					//(void) wait(&status); // wait for ****child may not be triggered
 		}
 	}
-//2) Create all nprocesses 
 //3) Note the current time (start) 
-	gettimeofday(&t1,NULL); 
+	gettimeofday(&t1,NULL);
+
+//2) Create all nprocesses 
 
 //4) The TH parent process sends each child process a SIGUSR1 signal to wake it up.  Each 
 	//process will then wake up and invoke execvp() to run the workload process. 
-	for(i = 0; i < pidcnt ; i++)
-	{
-		kill(pidarr[i],SIGUSR1);
-	}
+		for(i = 0; i < pidcnt ; i++)
+		{
+			kill(pidarr[i],SIGUSR1);
+		}
 //5)After all of the processes have been awakened and are executing, the TH sends each process a SIGSTOP signal to suspend it.
-	for(i = 0; i < pidcnt ; i++)
-	{
-		kill(pidarr[i],SIGSTOP);
-	}
+		for(i = 0; i < pidcnt ; i++)
+		{
+			kill(pidarr[i],SIGSTOP);
+		}
 //6) After all of the processes have been suspended, the TH sends each process a SIGCONT signal to resume it.
-	for(i = 0; i < pidcnt ; i++)
-	{
-		kill(pidarr[i],SIGCONT);
-	}
+		// if(pidcnt == nprostp)
+		// {
+			for(i = 0; i < pidcnt ; i++)
+			{
+				kill(pidarr[i],SIGCONT);
+			}
+		// } 
 //7)Once all processes are back up and running, the TH waits for each process to terminate.
-	for(i = 0; i < pidcnt ; i++)
+	for(i = 0; i < pidcnt; i++ )
 	{
 		(void) wait(&status);
 	}
@@ -362,7 +377,7 @@ int main( int argc, char *argv[])
 	p1strcat(finout, "sec\n");
 	p1putstr(1,finout);
 
-//10) Exit //must catch failing point in ERRCK //FREE	
+//10) Exit //must catch failing point in ERRCK //FREE
 	for(i = 0; i <cnt +1; i++)
 	{
 		free(args[i]);
@@ -372,8 +387,9 @@ int main( int argc, char *argv[])
 	return EXIT_SUCCESS;
 
 wait_for_children:
-	while (npro > 0)
-	{// this lets you know when each is dead
-		pause(); // acts like broadcast
-	}
+	printf("we are in wait child\n");
+	// while (npro > 0)
+	// {// this lets you know when each is dead
+	// 	//pause(); // acts like broadcast
+	// }
 }
