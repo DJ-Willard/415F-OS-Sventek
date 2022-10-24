@@ -1,5 +1,5 @@
 CFLAGS=-W -Wall
-PROGRAMS=cpubound iobound THv1 THv2 THv3 THv4
+PROGRAMS=cpubound iobound thv1 thv2 thv3 thv4
 
 all: $(PROGRAMS)
 
