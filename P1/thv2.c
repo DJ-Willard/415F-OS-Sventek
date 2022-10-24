@@ -27,7 +27,6 @@ void onusr1(UNUSED int sig)
 {
 	USR1_seen = true;
 	USR1_count ++;
-	printf("usr1 count: %d\n", USR1_count);
 }
 
 void onchld(UNUSED int sig)
@@ -159,7 +158,6 @@ int main( int argc, char *argv[])
 						p1putstr(2, "\n");
 						return EXIT_FAILURE;	
 					}
-					printf("%d\n",ncor);
 					break;
 			//comand line option
 			case 'l': 
@@ -236,7 +234,6 @@ int main( int argc, char *argv[])
 	}
 	if((q == -1|| npro == -1 || ncor == -1) || (cmdLine == NULL))
 	{
-		printf("value not set\n");
 		if(Qflag == 0 || Pflag == 0 || Cflag == 0 || Lflag == 0)
 		{
 			p1putstr(2,"Flag[s] set default evrrionment varible[s] failed to fetch or be set\n");
@@ -364,6 +361,8 @@ int main( int argc, char *argv[])
 			}
 		}
 	}
+//7)Once all processes are back up and running, the TH waits for each process to terminate. 
+
 //8) Note the current time (stop) 
 	gettimeofday(&t2,NULL);
 //9)Compute the elapsed time (stop - start) that it took for all of the processes to complete their 
