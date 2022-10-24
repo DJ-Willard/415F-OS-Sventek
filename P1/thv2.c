@@ -12,14 +12,22 @@
 #define USEAGE "usage: ./THv? [-q <msec>] [-p <nprocesses>] [-c <ncores>] -l 'command line' \n"
 #define SIZE 4096 // max bash output size
 int volatile npro = 0;
+int volatile nprostp = 0;
+int volatile nproact = 0;
 bool volatile USR1_seen = false;
 int volatile USR1_count = 0;
 
 
+void onusr2(UNUSED int sig)
+{
+
+}
 
 void onusr1(UNUSED int sig)
 {
 	USR1_seen = true;
+	USR1_count ++;
+	printf("usr1 count: %d\n", USR1_count);
 }
 
 void onchld(UNUSED int sig)
@@ -27,12 +35,23 @@ void onchld(UNUSED int sig)
 	pid_t pid;
 	int status;
 
-	while((pid = waitpid(-1, &status, WNOHANG)) > 0) //-1 any child, NOHANG means no hang for any child alive
+	while((pid = waitpid(-1,&status,(WNOHANG|WUNTRACED|WUNTRACED))) > 0) //-1 any child, NOHANG means no hang for any child alive
 	{
 		if(WIFEXITED(status) || WIFSIGNALED(status)) // marco in other file
 		{
 			npro--;
-			//kill(getpid,SIGUSR2);
+			kill(pid,SIGUSR2);
+		}
+		if(WIFSTOPPED(status))
+		{
+			nprostp++;
+			nproact--;
+			kill(pid, SIGUSR2);
+		}
+		if(WIFCONTINUED(status))
+		{
+			nproact++;
+			nprostp--;
 		}
 	}
 }
@@ -54,6 +73,8 @@ int main( int argc, char *argv[])
 	struct timespec ms20 = {0,20000000};
 	//get opt var / err var
 	int npro;
+	int nprostp; // track process stoped error check
+	int nproact; // track process continued error check
 	int ncor;
 	int q; 
 	int opt; // get opt iterator
@@ -64,14 +85,14 @@ int main( int argc, char *argv[])
 	char buf[SIZE] = "";
 	char pidVstr[SIZE] = "";
 	char errout[SIZE] = "";
-	char stdout[SIZE] = "";
+	char putout[SIZE] = "";
 	char word[SIZE] = "";
 	char copies[SIZE] = "";
 	char pcessor[SIZE] = "";
 	char finout[SIZE] = "";	
 	//fork and exec singal
 	pid_t pid;
-	int status;
+	//**********int status;
 	int pidcnt;
 	// general var  
 	int i, j, w, cnt, cmdlen;
@@ -84,6 +105,8 @@ int main( int argc, char *argv[])
 	j = 0; //iterrators
 	cmdlen = 0;
 	npro = -1;
+	nprostp = 0;
+	nproact = 0;
 	ncor = -1;
 	q = -1;
 	musecs = 0;
@@ -264,6 +287,7 @@ int main( int argc, char *argv[])
 		p1perror(2, errout);
 		return EXIT_FAILURE;
 	}
+	signal(SIGUSR2, onusr2);
 	for (i = 0; i < npro; i++) 
 	{
 		pid = fork();
@@ -284,13 +308,12 @@ int main( int argc, char *argv[])
 			case 0: // child process prepare to exec
 //1)Immediately after each process is created using fork(), the child process waits on the 
 	//SIGUSR1 signal before calling execvp().  form lab 2
-					printf("child");
-					while (! USR1_seen)
+					while (! USR1_seen) //in the run state
 					{
 						(void)nanosleep(&ms20, NULL);
 					}
-					p1strcat(stdout,"SIGUSR1 received\n");
-					p1putstr(1, stdout);
+					p1strcat(putout,"SIGUSR1 received\n");
+					p1putstr(1, putout);
 					execvp(args[0], args);
 					p1strcat(errout, "Child: Unable to exec ");
 					p1strcat(errout, args[0]);
@@ -299,16 +322,15 @@ int main( int argc, char *argv[])
 					return EXIT_FAILURE;
 			 		break;
 			default:  // in parent process
-					p1strcat(stdout,"Parent: waiting for ");
+					nproact ++;
+					p1strcat(putout,"Parent: waiting for ");
 					p1itoa(pid,pidVstr);
-					printf("%d\n", pidcnt);
 					pidarr[pidcnt] = pid;
-					printf("%d\n", pidarr[pidcnt]);
 					pidcnt++;
 					p1strpack(pidVstr, -8, '_', buf);
-					p1strcat(stdout, buf);
-					p1strcat(stdout, " to complete\n");
-					p1putstr(1, stdout);
+					p1strcat(putout, buf);
+					p1strcat(putout, " to complete\n");
+					p1putstr(1, putout);
 					//(void) wait(&status); // wait for ****child may not be triggered
 		}
 	}
@@ -316,21 +338,28 @@ int main( int argc, char *argv[])
 	gettimeofday(&t1,NULL);
 
 //2) Create all nprocesses 
-	if(npro -1 == pidcnt)
+	if(npro == pidcnt)
 	{
 //4) The TH parent process sends each child process a SIGUSR1 signal to wake it up.  Each 
 	//process will then wake up and invoke execvp() to run the workload process. 
 		for(i = 0; i < pidcnt ; i++)
 		{
+			printf("signal usr1 sent\n");
 			kill(pidarr[i],SIGUSR1);
 		}
 		for(i = 0; i < pidcnt ; i++)
 		{
+			printf("singal sigstop for all\n");
 			kill(pidarr[i],SIGSTOP);
 		}
-		for(i = 0; i < pidcnt ; i++)
-		{
-			kill(pidarr[i],SIGCONT);
+		if(pidcnt == nprostp)
+		{	
+			for(i = 0; i < pidcnt ; i++)
+			{
+
+				printf("singal sigcont fodr all\n");
+				kill(pidarr[i],SIGCONT);
+			}
 		}
 	}
 //8) Note the current time (stop) 
@@ -370,10 +399,6 @@ wait_for_children:
 	while (npro > 0)
 	{// this lets you know when each is dead
 		pause(); // acts like broadcast
-	}
-	for (i = 0; i < npro; i++)
-	{
-		wait(&status);
 	}
 }
 
