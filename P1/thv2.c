@@ -24,6 +24,29 @@ void onusr1(UNUSED int sig)
 	USR1_seen = true;
 }
 
+void onchld(UNUSED int sig)
+{
+	pid_t pid;
+	int status;
+
+	while((pid = waitpid(-1,&status,(WNOHANG|WUNTRACED|WUNTRACED))) > 0) //-1 any child, NOHANG means no hang for any child alive
+	{
+		if(WIFEXITED(status) || WIFSIGNALED(status)) // marco in other file
+		{
+			npro--;
+			kill(pid, SIGUSR2);
+		}
+		if(WIFSTOPPED(status))
+		{
+			kill(pid, SIGUSR2);
+		}
+		if(WIFCONTINUED(status))
+		{
+			kill(pid, SIGUSR2);
+		}
+	}
+}
+
 
 int main( int argc, char *argv[])
 {
@@ -243,6 +266,7 @@ int main( int argc, char *argv[])
 //store pid values here
 	int *pidarr = (int *)malloc(npro*sizeof(int));
 
+	signal(SIGCHLD, onchld);
 	if (signal(SIGUSR1, onusr1) == SIG_ERR) 
 	{
 		p1strcat(errout,"Can't establish SIGUSR1 handler\n");
