@@ -5,18 +5,12 @@
 #include <sys/wait.h> // for wait and pause
 #include <signal.h> //for signal
 #include <fcntl.h> // file manipulate
-#include <stdio.h> //for testing
 
 #define UNUSED __attribute__((unused))
 #define USEAGE "usage: ./THv? [-q <msec>] [-p <nprocesses>] [-c <ncores>] -l 'command line' \n"
 #define SIZE 4096 // max bash output size
 int volatile npro = 0;
 
-
-//#define TH_QUANTUM_MSEC 5000 //5 secound defaulf
-//#define TH_NPROCESSES 6 // 3 process per core
-//#define TH_NCORES 2 //defaulf form vbox set up
-//defined via export in bash form 2.6.1 will fail catch with these
 
 //SIG) signals for waiting form lab 3
 //in chapter 8 in reads
