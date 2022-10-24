@@ -347,11 +347,13 @@ int main( int argc, char *argv[])
 			printf("signal usr1 sent\n");
 			kill(pidarr[i],SIGUSR1);
 		}
+//5)After all of the processes have been awakened and are executing, the TH sends each process a SIGSTOP signal to suspend it.
 		for(i = 0; i < pidcnt ; i++)
 		{
 			printf("singal sigstop for all\n");
 			kill(pidarr[i],SIGSTOP);
 		}
+//6) After all of the processes have been suspended, the TH sends each process a SIGCONT signal to resume it.
 		if(pidcnt == nprostp)
 		{	
 			for(i = 0; i < pidcnt ; i++)
