@@ -1,0 +1,23 @@
+Name: Daniel Willard
+Duck ID: dwillar4
+email: dwillar4@uoregon.edu
+
+submission status:
+	thv1.c: no known bugs, passes valgrind no errors or leaks, compiles, links
+	thv2.c: no known bugs, passes valgrind no errors or leaks, compiles, links
+	thv3.c: is thv2 copy unable to get operational (compiles no leaks) 
+		not implemented to ensure points for complies no warnings links no mem leaks.
+	thv4.c: is thv2 copy unable to get operational (compiles no leaks) 
+		not implemented to ensure points for complies no warnings links no mem leaks.
+Helpers:
+	Adam Case: discussion of large ideas and understandings, sharing web resources. Helped with debug on thv1 and thv2.
+	Jay Taylor: discussion of large ideas and understandings, sharing web resources. 
+	Erin Stone: discussion of large ideas and understandings, sharing web resources. 
+	Gabriel Peery: covered extern varibles and thoughts on errors in command line parsing. 
+
+File states: 
+	All code independently made with only discussion of how funtions and process work. 
+	Any code not made noted in file form the lab it was pulled form and modified.
+
+Other Notes:
+	Much more comfortable with man pages.

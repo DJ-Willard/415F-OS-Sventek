@@ -1,5 +1,7 @@
-CFLAGS=-g -W -Wall
+CFLAGS=-W -Wall -I/usr/local/include -g
+LDFLAGS=-L/usr/local/lib -g
 PROGRAMS=cpubound iobound thv1 thv2 thv3 thv4
+LIBRARIES=-lADTs
 
 all: $(PROGRAMS)
 
@@ -16,7 +18,7 @@ thv2: thv2.o p1fxns.o
 	gcc -g -o $@ $^
 
 thv3: thv3.o p1fxns.o
-	gcc -o $@ $^
+	gcc $(LDFLAGS) -o $@ $^ $(LIBRARIES)
 
 thv4: thv4.o p1fxns.o
 	gcc -o $@ $^

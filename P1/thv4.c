@@ -2,34 +2,47 @@
 #include <stdlib.h>// for EXIT status
 #include "p1fxns.h"// professor helpful functions adt
 #include <sys/time.h> // time handler
+#include <time.h> // for nano sleep
 #include <sys/wait.h> // for wait and pause
 #include <signal.h> //for signal
 #include <fcntl.h> // file manipulate
+#include <stdio.h> //for testing
 
 #define UNUSED __attribute__((unused))
 #define USEAGE "usage: ./THv? [-q <msec>] [-p <nprocesses>] [-c <ncores>] -l 'command line' \n"
 #define SIZE 4096 // max bash output size
 int volatile npro = 0;
+bool volatile USR1_seen = false;
 
+void onusr2(UNUSED int sig)
+{
 
-//SIG) signals for waiting form lab 3
-//in chapter 8 in reads
-//SIGUSR2 handler  // to send a signal to self when child dies
-//like hard ware interput but software
+}
 
-/*make
- * SIGCHLD handler
- */
+void onusr1(UNUSED int sig)
+{
+	USR1_seen = true;
+}
+
 void onchld(UNUSED int sig)
 {
 	pid_t pid;
 	int status;
 
-	while((pid = waitpid(-1, &status, WNOHANG)) > 0) //-1 any child, NOHANG means no hang for any child alive
+	while((pid = waitpid(-1,&status,(WNOHANG|WUNTRACED|WUNTRACED))) > 0) //-1 any child, NOHANG means no hang for any child alive
 	{
 		if(WIFEXITED(status) || WIFSIGNALED(status)) // marco in other file
 		{
 			npro--;
+			kill(pid, SIGUSR2);
+		}
+		if(WIFSTOPPED(status))
+		{
+			kill(pid, SIGUSR2);
+		}
+		if(WIFCONTINUED(status))
+		{
+			kill(pid, SIGUSR2);
 		}
 	}
 }
@@ -48,6 +61,7 @@ int main( int argc, char *argv[])
 	char timed[SIZE] = "";
 	char sec[SIZE] = "";
 	char dsecs[SIZE] = ""; // decial part of secounds
+	struct timespec ms20 = {0,20000000};
 	//get opt var / err var
 	int npro;
 	int ncor;
@@ -68,6 +82,7 @@ int main( int argc, char *argv[])
 	//fork and exec var
 	pid_t pid;
 	int status;
+	int pidcnt;
 	// general var  
 	int i, j, w, cnt, cmdlen;
 
@@ -77,6 +92,7 @@ int main( int argc, char *argv[])
 	i = 0;//iterrators
 	fli = 0;//*
 	j = 0; //iterrators
+	pidcnt = 0;
 	cmdlen = 0;
 	npro = -1;
 	ncor = -1;
@@ -90,7 +106,7 @@ int main( int argc, char *argv[])
 
 
 //FLAGCK) flag cheak aand asssing falg value
-// use getopt extern char *optarg, int optind, opterr, optopt; 
+	// use getopt extern char *optarg, int optind, opterr, optopt; 
 	while((opt = getopt(argc, argv, "q:p:c:l:")) != -1)
 	{
 		switch(opt)
@@ -246,11 +262,17 @@ int main( int argc, char *argv[])
 		}
 	}
 	args[j] = NULL;
-//1) Note the current time (start)
-	gettimeofday(&t1,NULL);
-//2) Launch ‘nprocesses’ processes executing ‘command’ using fork(), execvp(), and any other required system calls. To make things simpler, assume that the programs will run in the same environment as used by TH.
-	//ripped form lab 4 childhlder/ lecture 4 and editied
+
+//store pid values here
+	int *pidarr = (int *)malloc(npro*sizeof(int));
+
 	signal(SIGCHLD, onchld);
+	if (signal(SIGUSR1, onusr1) == SIG_ERR) 
+	{
+		p1strcat(errout,"Can't establish SIGUSR1 handler\n");
+		p1perror(2, errout);
+		return EXIT_FAILURE;
+	}
 	for (i = 0; i < npro; i++) 
 	{
 		pid = fork();
@@ -259,15 +281,21 @@ int main( int argc, char *argv[])
 			case -1: //in perent fork fail
 					p1strcat(errout, "Parent: fork() call failed Parent: error \n");
 					p1perror(2, errout);
-					goto wait_for_children;
 					for(i = 0; i <cnt +1; i++)
 					{
 						free(args[i]);
 					}
 					free(args);
+					free(pidarr);
 					return EXIT_FAILURE;
 					break;
 			case 0: // child process prepare to exec
+//1)Immediately after each process is created using fork(), the child process waits on the 
+	//SIGUSR1 signal before calling execvp().  form lab 2
+					while (! USR1_seen) //in the run state
+					{
+						(void)nanosleep(&ms20, NULL);
+					}
 					execvp(args[0], args);
 					p1strcat(errout, "Child: Unable to exec ");
 					p1strcat(errout, args[0]);
@@ -276,18 +304,45 @@ int main( int argc, char *argv[])
 					return EXIT_FAILURE;
 			 		break;
 			default:  // in parent process
+					pidarr[pidcnt] = pid;
+					pidcnt++;
 					p1strcat(stdout,"Parent: waiting for ");
 					p1itoa(pid,pidVstr);
 					p1strpack(pidVstr, -8, '_', buf);
 					p1strcat(stdout, buf);
 					p1strcat(stdout, " to complete\n");
 					p1putstr(1, stdout);
-					(void) wait(&status); // wiat for child
 		}
 	}
-//4) Note the current time (stop)
+//2) Create all nprocesses 
+//3) Note the current time (start) 
+	gettimeofday(&t1,NULL); 
+
+//4) The TH parent process sends each child process a SIGUSR1 signal to wake it up.  Each 
+	//process will then wake up and invoke execvp() to run the workload process. 
+	for(i = 0; i < pidcnt ; i++)
+	{
+		printf("sigusr1 sent\n");
+		kill(pidarr[i],SIGUSR1);
+	}
+//5)After all of the processes have been awakened and are executing, the TH sends each process a SIGSTOP signal to suspend it.
+	for(i = 0; i < pidcnt ; i++)
+	{
+		printf("sigustop sent\n");
+		kill(pidarr[i],SIGSTOP);
+	}
+//6) After all of the processes have been suspended, the TH sends each process a SIGCONT signal to resume it.
+	for(i = 0; i < pidcnt ; i++)
+	{
+		printf("sigCont sent\n");
+		kill(pidarr[i],SIGCONT);
+	}
+//7)Once all processes are back up and running, the TH waits for each process to terminate.
+	(void) wait(&status);
+//8) Note the current time (stop) 
 	gettimeofday(&t2,NULL);
-//5) Compute the elapsed time (stop - start) that it took for all of the processes to complete their processing and display on standard output1	
+//9)Compute the elapsed time (stop - start) that it took for all of the processes to complete their 
+	//processing and display on standard output 
 	musecs = 1000000 *(t2.tv_sec-t1.tv_sec) + (t2.tv_usec-t1.tv_usec);
 	p1strcat(finout, "The elased time to execute ");
 	p1itoa(npro, copies);
@@ -308,18 +363,12 @@ int main( int argc, char *argv[])
 	p1strcat(finout, "sec\n");
 	p1putstr(1,finout);
 
-//6) Exit //must catch failing point in ERRCK //FREE
+//10) Exit //must catch failing point in ERRCK //FREE	
 	for(i = 0; i <cnt +1; i++)
 	{
 		free(args[i]);
 	}
 	free(args);
+	free(pidarr);
 	return EXIT_SUCCESS;
-//3) After all of the processes are running, wait for each process to terminate.
-// we take advatage of pause
-wait_for_children:
-	while (npro > 0)
-	{// this lets you know when each is dead
-		pause(); // acts like broadcast
-	}
 }
