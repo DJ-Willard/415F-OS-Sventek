@@ -1,0 +1,16 @@
+The following calls to DIAGNOSTICS() occur in the disk device module for
+Project 2.  If you see these in the output from your solution to the
+project, you are doing something wrong, and need to fix it.
+
+
+1. DIAGNOSTICS("BUG: Two or more parallel calls to write a sector\n");
+If you see this diagnostic, your code has called the device to write a sector
+while it is still processing the previous write.  The write side of the
+device can only handle one sector at a time.
+
+2. DIAGNOSTICS("BUG: Two or more parallel calls to read a sector.\n");
+If you see this diagnostic, your code has called the device to read a sector
+while it is still processing the previous read.  The read side of the
+device can only handle one sector at a time.
+
+Both of these are reporting bugs in your code that you must fix.
