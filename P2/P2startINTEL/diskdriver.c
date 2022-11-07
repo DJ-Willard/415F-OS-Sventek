@@ -21,6 +21,7 @@ BoundedBuffer *bbRead;
 BoundedBuffer *bbVoucher;
 //for diskdevice form init
 DiskDevice *DD_ID = NULL;
+bool shutdown = false;
  
 /* you must define struct voucher and allocate a sufficient number of them in your 
  * declared data; the structure must enable application threads to block until the 
@@ -72,10 +73,10 @@ void voucherRecyle(Voucher *v)
 	pthread_cond_broadcast(&v->status_flag);
 	pthread_mutex_unlock(&v->v_lock);	
 }
-// fxn for read thread cosmuner of bbRead
+// fxn for read thread cosmuner of bbRead 
 void* fxn_readThrd(UNUSED void* rtargs)
 {
-	while(1)
+	while(!shutdown)
 	{
 		Voucher *v;
 		bbRead->blockingRead(bbRead, (void **) &v);
@@ -97,7 +98,7 @@ void* fxn_readThrd(UNUSED void* rtargs)
 // fxn for write thread cosmuner of bbWrite
 void* fxn_writeThrd(UNUSED void* wtArgs)
 {
-	while(1)
+	while(!shutdown)
 	{
 		Voucher *v;
 		bbWrite->blockingRead(bbWrite, (void **) &v);
@@ -207,27 +208,25 @@ int redeem_voucher(Voucher *v, SectorDescriptor **sd)
 	{
 		fprintf(stderr, "{DRIVER> %ld Failed [READ] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
 		value = 0;
-		voucherRecyle(v);
 	}
 	if(v->status == -1 && v->request_t == 0)
 	{
 		fprintf(stderr, "{DRIVER> %ld Failed [WRITE] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
 		value = 0;
-		voucherRecyle(v);
 	}
 	if(v->status == 3 && v->request_t == 1)
 	{
-		fprintf(stderr, "{DRIVER> %ld Success [READ] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
+		fprintf(stdout, "{DRIVER> %ld Success [READ] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
 		*sd = v->sd;
 		value = 1;
-		voucherRecyle(v);
 	}
 	if(v->status == 3 && v->request_t == 0)
 	{
-		fprintf(stderr, "{DRIVER> %ld Sucess [WRITE] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
+		fprintf(stdout, "{DRIVER> %ld Success [WRITE] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
 		value = 1;
-		voucherRecyle(v);
 	}
+	pthread_mutex_unlock(&v->v_lock);
+	voucherRecyle(v);
 	return value;
 }
 /* create Free Sector Descriptor Store 
@@ -240,8 +239,10 @@ void init_disk_driver(DiskDevice *dd, void *mem_start, unsigned long mem_length,
 {
 	DD_ID = dd;
 	*fsds =  FreeSectorDescriptorStore_create(mem_start,mem_length);
-	//cheack for allocation error
-
+	if(*fsds == NULL)
+	{
+		exit(EXIT_FAILURE);
+	}
 	bbWrite = BoundedBuffer_create(BBSIZE); //max pid form document 10
 	bbRead = BoundedBuffer_create(BBSIZE);
 	bbVoucher = BoundedBuffer_create(NVOUCHERS);
@@ -250,5 +251,4 @@ void init_disk_driver(DiskDevice *dd, void *mem_start, unsigned long mem_length,
 	pthread_t ReadThrd_id;
 	pthread_create(&WriteThrd_id, NULL, fxn_writeThrd, NULL);
 	pthread_create(&ReadThrd_id, NULL, fxn_readThrd, NULL);
-
 }
