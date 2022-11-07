@@ -203,22 +203,31 @@ int redeem_voucher(Voucher *v, SectorDescriptor **sd)
 	{
 		pthread_cond_wait(&v->status_flag, &v->v_lock);
 	}
-	if(v->status == -1)
-		{
-			value = 0;
-			voucherRecyle(v);
-		}
-		if(v->status == 3 && v->request_t == 1)
-		{
-			*sd = v->sd;
-			value = 1;
-			voucherRecyle(v);
-		}
-		if(v->status == 3 && v->request_t == 0)
-		{
-			value = 1;
-			voucherRecyle(v);
-		}
+	if(v->status == -1 && v->request_t == 1)
+	{
+		fprintf(stderr, "{DRIVER> %ld Failed [READ] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
+		value = 0;
+		voucherRecyle(v);
+	}
+	if(v->status == -1 && v->request_t == 0)
+	{
+		fprintf(stderr, "{DRIVER> %ld Failed [WRITE] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
+		value = 0;
+		voucherRecyle(v);
+	}
+	if(v->status == 3 && v->request_t == 1)
+	{
+		fprintf(stderr, "{DRIVER> %ld Success [READ] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
+		*sd = v->sd;
+		value = 1;
+		voucherRecyle(v);
+	}
+	if(v->status == 3 && v->request_t == 0)
+	{
+		fprintf(stderr, "{DRIVER> %ld Sucess [WRITE] of sector: %ld to disk\n",sector_descriptor_get_pid(v->sd),sector_descriptor_get_block(v->sd));
+		value = 1;
+		voucherRecyle(v);
+	}
 	return value;
 }
 /* create Free Sector Descriptor Store 
