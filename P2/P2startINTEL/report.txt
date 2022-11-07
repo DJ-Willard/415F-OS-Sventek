@@ -1,0 +1,45 @@
+﻿Name: Daniel Willard
+Duckid: dwillar4
+Current Submission Status:
+	Compiles with no errors not functioning as expected read and read thread end unexceptedly.
+
+Helpers:
+
+Jay Taylor:  developed high minded flow chart idea, helper with syntax issue, supplied web resource for initialization of mutex.
+
+Adam Case: Help with debugging, global variable issue. 
+
+Turan Bulut: help with general questions on voucher how I set up my voucher.
+
+Dr. Joe Sventek: answered question about buff. Thought it was a thread safe array not queue. It was a queue.
+
+
+Diagram 1 description:	Init flow
+	set a global Disk Device, read buffer size 10(max pid), write buffer(max pid), voucher buffer (size of #sd = 30 for runing demo for 1 sec) 
+	initialize FSDS(mem length - mem start), write thread, read thread
+	define stucture: sd, status var, pthread mutex, pthread conditional, var type of request
+	
+Diagram 2 top description: write flow
+	application thread call write function.
+		Wait till return voucher (at end of write function)
+	write function fetches a voucher writes in a sd to voucher, update status 		though helper function enqueues the voucher into the write buffer 		update voucher status.
+	
+	write thread pick up the bounded buffer  voucher and write to disk 			(critical section) returning success or failure into storage in 			voucher status. 
+
+Diagram 2 bottom description: read flow
+	application thread calls read function 
+		returns the voucher with the sd data
+	enqueues the voucher into read buffer
+	read thread pull voucher out of read queue and reads for disk 
+	returns sd data read in voucher
+	
+Diagram 3 description: voucher redemption flow
+	redeem voucher can be called at any time but will be blocked until the 		read or write is complete.
+	Once complete status is returned in voucher
+	if read return sd data in SD form voucher then recycle voucher to free 		list buff
+	if write recycle voucher to free voucher list buff
+
+Diagram 4 function aid for me.
+	
+
+

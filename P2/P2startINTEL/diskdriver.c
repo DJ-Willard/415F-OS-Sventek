@@ -36,14 +36,6 @@ struct voucher{
 	pthread_cond_t status_flag; // protect critcial region.
 };
 
-struct wtArgs{
-	BoundedBuffer *bbWrite;
-}WTArgs;
-
-struct rtArgs{
-	BoundedBuffer *bbRead;
-}RTArgs;
-
 //array of voucher based off nember of free sectors 30 for init.
 Voucher vouchers[NVOUCHERS];
 
@@ -65,9 +57,9 @@ void initFreeVoucher(void)
 /* definition[s] of function[s] required for your thread[s] */ 
 //helper fuction assign vouvher form free voucher list 
 //resourced form lab5  blocking, each process needs a voucher to continue
-void voucherAssignment(Voucher *stub)
+void voucherAssignment(Voucher **stub)
 {
-	bbVoucher->blockingRead(bbVoucher, (void **) &stub);
+	bbVoucher->blockingRead(bbVoucher, (void **) stub);
 }
 //helper fuction recycle used vouchers to freevoucher list  resourced form lab5 blocking
 void voucherRecyle(Voucher *v)
@@ -81,40 +73,47 @@ void voucherRecyle(Voucher *v)
 	pthread_mutex_unlock(&v->v_lock);	
 }
 // fxn for read thread cosmuner of bbRead
-void* fxn_readThrd(UNUSED void* rtArgs)
+void* fxn_readThrd(UNUSED void* rtargs)
 {
-	Voucher *v;
-	bbRead->blockingRead(bbRead, (void **) &v);
-	pthread_mutex_lock(&v->v_lock);
-	pthread_cond_wait(&v->status_flag, &v->v_lock);
-	if(read_sector(DD_ID, v->sd))
+	while(1)
 	{
-		v->status = 3;
+		Voucher *v;
+		bbRead->blockingRead(bbRead, (void **) &v);
+		pthread_mutex_lock(&v->v_lock);
+		if(read_sector(DD_ID, v->sd))
+		{
+			v->status = 3;
+		}
+		else
+		{
+			v->status = -1;
+		}
+		pthread_mutex_unlock(&v->v_lock);
+		pthread_cond_broadcast(&v->status_flag);
 	}
-	else
-	{
-		v->status = -1;
-	}
-	pthread_mutex_unlock(&v->v_lock);
-	pthread_cond_broadcast(&v->status_flag);
+	return NULL;
+	
 }
 // fxn for write thread cosmuner of bbWrite
 void* fxn_writeThrd(UNUSED void* wtArgs)
 {
-	Voucher *v;
-	bbWrite->blockingRead(bbWrite, (void **) &v);
-	pthread_mutex_lock(&v->v_lock);
-	pthread_cond_wait(&v->status_flag, &v->v_lock);
-	if(read_sector(DD_ID, v->sd))
+	while(1)
 	{
-		v->status = 3;
-	}
-	else
-	{
-		v->status = -1;
-	}
-	pthread_mutex_unlock(&v->v_lock);
-	pthread_cond_broadcast(&v->status_flag);
+		Voucher *v;
+		bbWrite->blockingRead(bbWrite, (void **) &v);
+		pthread_mutex_lock(&v->v_lock);
+		if(write_sector(DD_ID, v->sd))
+		{
+			v->status = 3;
+		}
+		else
+		{
+			v->status = -1;
+		}
+		pthread_mutex_unlock(&v->v_lock);
+		pthread_cond_broadcast(&v->status_flag);
+	}	
+	return NULL;
 }
 /* queue up sector descriptor for reading 
  * return a Voucher through *v for eventual synchronization by application 
@@ -123,14 +122,12 @@ void* fxn_writeThrd(UNUSED void* wtArgs)
  */ 
 void blocking_read_sector(SectorDescriptor *sd, Voucher **v)
 {
-	Voucher *r;
-	r = *v; 
-	voucherAssignment(r);
-	r->sd = sd;
-	r->status++;
-	r->request_t = 1;
-	bbRead->blockingWrite(bbRead, (void *) r);
-	r->status++;
+	voucherAssignment(v);
+	(*v)->sd = sd;
+	(*v)->status++;
+	(*v)->request_t = 1;
+	bbRead->blockingWrite(bbRead, (void *) (*v));
+	(*v)->status++;
 }
 /* if you are able to queue up sector descriptor immediately 
  *     return a Voucher through *v and return 1 
@@ -139,20 +136,18 @@ void blocking_read_sector(SectorDescriptor *sd, Voucher **v)
 int nonblocking_read_sector(SectorDescriptor *sd, Voucher **v)
 {
 	int request_status;
-	Voucher *r;
-	r = *v;
-	voucherAssignment(r);
-	r->sd = sd;
-	r->status++;
-	r->request_t = 1;
-	if(bbRead->nonblockingWrite(bbRead, (void *) r) == 1)
+	voucherAssignment(v);
+	(*v)->sd = sd;
+	(*v)->status++;
+	(*v)->request_t = 1;
+	if(bbRead->nonblockingWrite(bbRead, (void *) (*v)) == 1)
 	{
-		r->status++;
+		(*v)->status++;
 		request_status = 1;
 	}
 	else
 	{
-		voucherRecyle(r);
+		voucherRecyle(*v);
 		request_status = 0;
 	}
 	return request_status;
@@ -163,14 +158,12 @@ int nonblocking_read_sector(SectorDescriptor *sd, Voucher **v)
  */ 
 void blocking_write_sector(SectorDescriptor *sd, Voucher **v)
 {
-	Voucher *w;
-	w = *v;
-	voucherAssignment(w);
-	w->sd = sd;
-	w->status++;
-	w->request_t = 0;
-	bbWrite->blockingWrite(bbWrite, (void *) w);
-	w->status++;
+	voucherAssignment(v);
+	(*v)->sd = sd;
+	(*v)->status++;
+	(*v)->request_t = 0;
+	bbWrite->blockingWrite(bbWrite, (void *) (*v));
+	(*v)->status++;
 }
 /* if you are able to queue up sector descriptor immediately 
  *     return a Voucher through *v and return 1
@@ -179,20 +172,18 @@ void blocking_write_sector(SectorDescriptor *sd, Voucher **v)
 int nonblocking_write_sector(SectorDescriptor *sd, Voucher **v)
 {
 	int request_status;
-	Voucher *w;
-	w = *v;
-	voucherAssignment(w);
-	w->sd = sd;
-	w->status++;
-	w->request_t = 0;
-	if(bbWrite->nonblockingWrite(bbWrite, (void *)w) == 1)
+	voucherAssignment(v);
+	(*v)->sd = sd;
+	(*v)->status++;
+	(*v)->request_t = 0;
+	if(bbWrite->nonblockingWrite(bbWrite, (void *) (*v)) == 1)
 	{
-		w->status++;
+		(*v)->status++;
 		request_status = 1;
 	}
 	else
 	{
-		voucherRecyle(w);
+		voucherRecyle(*v);
 		request_status = 0;
 	}
 	return request_status;
@@ -214,21 +205,18 @@ int redeem_voucher(Voucher *v, SectorDescriptor **sd)
 	}
 	if(v->status == -1)
 		{
-			//block calling app
-			fpirntf(stderr," application %d (%s) %s to sector %d was Un ");
 			value = 0;
+			voucherRecyle(v);
 		}
 		if(v->status == 3 && v->request_t == 1)
 		{
 			*sd = v->sd;
 			value = 1;
-			fpirntf(stdout, )
 			voucherRecyle(v);
 		}
 		if(v->status == 3 && v->request_t == 0)
 		{
 			value = 1;
-			fprintf()
 			voucherRecyle(v);
 		}
 	return value;
@@ -245,18 +233,13 @@ void init_disk_driver(DiskDevice *dd, void *mem_start, unsigned long mem_length,
 	*fsds =  FreeSectorDescriptorStore_create(mem_start,mem_length);
 	//cheack for allocation error
 
-	BoundedBuffer *bbWrite = BoundedBuffer_create(BBSIZE); //max pid form document 10
-	BoundedBuffer *bbRead = BoundedBuffer_create(BBSIZE);
-	BoundedBuffer *bbVoucher = BoundedBuffer_create(NVOUCHERS);
+	bbWrite = BoundedBuffer_create(BBSIZE); //max pid form document 10
+	bbRead = BoundedBuffer_create(BBSIZE);
+	bbVoucher = BoundedBuffer_create(NVOUCHERS);
 	initFreeVoucher();
 	pthread_t WriteThrd_id;
 	pthread_t ReadThrd_id;
-	pthread_create(&WriteThrd_id, NULL, fxn_writeThrd, &WTArgs);
-	pthread_create(&ReadThrd_id, NULL, fxn_readThrd, &RTArgs);
+	pthread_create(&WriteThrd_id, NULL, fxn_writeThrd, NULL);
+	pthread_create(&ReadThrd_id, NULL, fxn_readThrd, NULL);
 
 }
-
-// int main(int UNUSED argc, char UNUSED const *argv[])
-// {
-
-// }
