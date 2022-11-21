@@ -17,13 +17,13 @@
 #define HOST "localhost"
 #define PORT 19998
 
-volatile bool kill = false;
+volatile bool doneC = false;
 
 //form lab 4 SIGINT handler
 static void onint(UNUSED int sig)
 {
 	printf("^C signal received, Shutting Down\n");
-	kill = true;
+	doneC = true;
 }
 /* parses words form file.
 int extractwords(char *buf, char *sep, char *words[])
@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
 		{
 			case 'f':
 					FFlag = true;
+
 					break;
 			default:
 					if(optopt != 'f')
@@ -89,8 +90,8 @@ int main(int argc, char *argv[])
 	signal(SIGINT,onint);
 	//open failure of the initialization file
 	if(FFlag)
-	{
-		fd = fopen(argv[optind], "r");
+	{	
+		fd = fopen(argv[2], "r");
 		//open failure of the initialization file
 		if (fd == NULL)
 		{
@@ -125,7 +126,7 @@ int main(int argc, char *argv[])
 	}
 
 	//wait for CTRL-C form lab 4
-	while(!kill)
+	while(!doneC)
 	{
 		nanosleep(&ms20, NULL);
 	}
