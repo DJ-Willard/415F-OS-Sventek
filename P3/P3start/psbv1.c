@@ -41,12 +41,13 @@ void *request(UNUSED void *args)
 	char query[10000];
 	char response[10001];
 	unsigned rlen = 0;
+	unsigned qlen = 0;
 
 
-	while((bxp_query(svc, &ep, query, 10000))> 0)
+	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
 	{
 		//the response to send back would be created by sprintf(response," 1%s " , query);
-		sprintf(response, "l%s", query);
+		sprintf(response, "1%s", query);
 		rlen = strlen(response) +1;
 		bxp_response(svc, &ep, response, rlen);
 	}
@@ -65,6 +66,8 @@ int main(int argc, char *argv[])
 	int opt;
 	char buf[BUFSIZ];
 	int i = 0;
+	bool clearchannel = false;
+	bool Fflag = false;
 	// singal and thread varibles
 	struct timespec ms20 = {0,20000000};
 	pthread_t requestThread;	
@@ -76,7 +79,7 @@ int main(int argc, char *argv[])
 		switch(opt)
 		{
 			case 'f':
-
+					Fflag = true;
 					fd = fopen(argv[2], "r");
 					//open failure of the initialization file
 					if (fd == NULL)
@@ -103,16 +106,19 @@ int main(int argc, char *argv[])
 
 	//<filename> contains a set of channel names, one per line
 	//open this file, read each channel name, and print “Creating publish/subscribe channel: %s\n”
-	while(fgets(buf, BUFSIZ, fd) != NULL)
+	if(Fflag)
 	{
-
-	 	channels[i] = strdup(buf);
-		fprintf(stdout, "Creating publish/ subscride channel: %s\n", channels[i]);
-		i++;
-
+		while(fgets(buf, BUFSIZ, fd) != NULL)
+		{
+	 		channels[i] = strdup(buf);
+			fprintf(stdout, "Creating publish/ subscride channel: %s\n", channels[i]);
+			i++;
+		}
+		fclose(fd);
 	}
 	//after you have processed the entire file, you need to close it.
-	fclose(fd);
+	if(Fflag)
+		clearchannel = true;
 	fd = NULL;
 	//Initialize the BXP runtime 1 so that it can create and accept encrypted connection requests
 	assert(bxp_init(port,1));
@@ -131,6 +137,13 @@ int main(int argc, char *argv[])
 	cleanup:
 		if(fd != NULL)
 			fclose(fd);
+		if(clearchannel)
+		{
+			for(;i >= 0; i--)
+			{
+				free(channels[i]);
+			}
+		}
 		(void)pthread_cancel(requestThread);
 		pthread_join(requestThread,NULL);
 		return EXIT_FAILURE;

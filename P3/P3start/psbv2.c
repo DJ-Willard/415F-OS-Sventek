@@ -1,5 +1,6 @@
 #include "BXP/bxp.h" // for bxp
 #include "ADTs/arrayqueue.h" //adt for array queue
+#include <valgrind/valgrind.h> // memory cheack
 #include <pthread.h> // for p threads
 #include <assert.h> // for assert
 #include <time.h> //nanosleep
@@ -18,60 +19,80 @@
 #define HOST "localhost"
 #define PORT 19998
 
-volatile bool doneC = false;
+
+volatile bool killprog = false;
+volatile bool doneR = false;
 volatile bool doneF = false;
 
-typedef struct psblock{
-	bool status;
-	char channel;
-} PSBlock;
-
+pthread_mutex_t lockR = PTHREAD_MUTEX_INITIALIZER;
 
 //form lab 4 SIGINT handler
 static void onint(UNUSED int sig)
 {
-	printf("\n ^C signal received, Shutting Down\n");
-	doneC = true;
+ 	killprog = true;
+	printf("^C signal received, Shutting Down\n");
 }
-/* parses words form file.
-int extractwords(char *buf, char *sep, char *words[])
+
+
+//thread fuction to ensure clean exist(recieves request issues response)
+void *request(UNUSED void *args)
+{
+	BXPService *svc = (BXPService *)args;
+	BXPEndpoint ep;
+	char query[10000];
+	char response[10001];
+	unsigned rlen = 0;
+	unsigned qlen = 0;
+	char *words[25];
+	char out[BUFSIZ];
+	char back[128];
+	BXPConnection bxpc;
+	unsigned port;
+	unsigned backlen;
+
+	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
+	{
+		(void) extractWords(query, "|", words);
+		sscanf(words[1], "%u", &port);
+		bxpc = bxp_connect(words[0], (unsigned short)port, words[2], 1,1);
+		strcpy(out, words[3]);
+		bxp_call(bxpc, out, strlen(out)+1, back, sizeof back, &backlen);
+		bxp_disconnect(bxpc);
+		//the response to send back would be created by sprintf(response," 1%s " , query);
+		//
+		sprintf(response, "%s", query);
+		rlen = strlen(response) +1;
+		bxp_response(svc, &ep, response, rlen);
+	}
+	return NULL;
+}
+//lab 7 callback server extract
+static int extractWords(char *buf, char *sep, char *words[])
 {
 	int i;
 	char *p;
 
-	for(p = strtok(buf, sep), i = 0; p != NULL; p = strtok(NULL, sep), i++)|
+	for(p = strtok(buf, sep), i = 0; p != NULL; p = strtok(NULL, sep), i++)
 	{
 		words[i] = p;
 	}
-	words[i] =NULL;
+	words[i] = NULL;
 	return i;
-}
-*/
-
-//thread fuction to ensure clean exist
-
-void *request(UNUSED void *args)
-{
-	
 }
 
 
 int main(int argc, char *argv[])
 {
 	//varribles for BXP
-	BXPEndpoint ep;
 	BXPService svc;
-	char channels[10000];
-	char query[10000];
-	char response[10001];
-	unsigned qlen;
-	unsigned rlen;
+	char *channels[1000];
 	int port = PORT;
 	//varibles for file handling
 	FILE *fd = NULL;
 	int opt;
-	bool FFlag = false;
 	char buf[BUFSIZ];
+	int i = 0;
+	bool clearchannel = false;
 	// singal and thread varibles
 	struct timespec ms20 = {0,20000000};
 	pthread_t requestThread;	
@@ -83,8 +104,14 @@ int main(int argc, char *argv[])
 		switch(opt)
 		{
 			case 'f':
-					FFlag = true;
 
+					fd = fopen(argv[2], "r");
+					//open failure of the initialization file
+					if (fd == NULL)
+					{
+						fprintf(stderr, "%s: unable to open file - %s\n", argv[0], argv[optind]);
+						goto cleanup;
+					}
 					break;
 			default:
 					if(optopt != 'f')
@@ -95,65 +122,52 @@ int main(int argc, char *argv[])
 						fprintf(stderr, "%s\n",USAGE);
 					}
 					goto cleanup;
-
 		}
 	}
-	//error handling //
-	//Except for initialization failure, 
-	//open failure of the initialization file, and 
+
+	//error handling: Except for initialization failure,open failure of the initialization file, and 
 	//receipt of an INT signal, PSBv1 should never exit.
-
 	signal(SIGINT,onint);
-	//open failure of the initialization file
-	if(FFlag)
-	{	
-		fd = fopen(argv[2], "r");
-		//open failure of the initialization file
-		if (fd == NULL)
-		{
-			fprintf(stderr, "%s: unable to open file - %s\n", argv[0], argv[optind]);
-			goto cleanup;
-		}
-	}
 
-	//<filename> contains aset of channel names, one per line
+	//<filename> contains a set of channel names, one per line
 	//open this file, read each channel name, and print “Creating publish/subscribe channel: %s\n”
 	while(fgets(buf, BUFSIZ, fd) != NULL)
 	{
-		strcpy(channels, buf);
-		fprintf(stdout, "Creating publish/ subscride channel: %s\n", channels);
+
+	 	channels[i] = strdup(buf);
+		fprintf(stdout, "Creating publish/ subscride channel: %s\n", channels[i]);
+		i++;
+
 	}
 	//after you have processed the entire file, you need to close it.
 	fclose(fd);
-	doneF = true;
-
+	clearchannel = true;
+	fd = NULL;
 	//Initialize the BXP runtime 1 so that it can create and accept encrypted connection requests
 	assert(bxp_init(port,1));
 	assert((svc = bxp_offer(SERVICE)));
-	//form client.c example.
 	//Create a thread that will receive requests from client applications.
-	pthread_create(&requestThread,NULL, request, NULL);
+	assert(! pthread_create(&requestThread,NULL, request, (void *) svc));
 
-	//Respond to each such request by echoing back the received request along with a statusbyte; 
-	//the first byte of the response is ‘1’ for success, ‘0’ for failure
-	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
+//wait for CTRL-C form lab 4
+	while(!killprog)
 	{
-		//the response to send back would be created by sprintf(response," 1%s " , query);
-		sprintf(response, "l%s", query);
-		rlen = strlen(response) +1;
-		assert(bxp_response(svc, &ep, response, rlen));
-	}
-
-	//wait for CTRL-C form lab 4
-	while(!doneC)
 		nanosleep(&ms20, NULL);
-	if(!doneF)
-		fclose(fd);
-	return EXIT_SUCCESS;
+	}
+	goto cleanup;
 
-	//cleanup close open file.
+//cleanup close open file.
 	cleanup:
 		if(fd != NULL)
 			fclose(fd);
+		if(clearchannel)
+		{
+			for(;i >= 0; i--)
+			{
+				free(channels[i]);
+			}
+		}
+		(void)pthread_cancel(requestThread);
+		pthread_join(requestThread,NULL);
 		return EXIT_FAILURE;
 }
