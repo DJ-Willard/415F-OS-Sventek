@@ -33,39 +33,6 @@ static void onint(UNUSED int sig)
 	printf("^C signal received, Shutting Down\n");
 }
 
-
-//thread fuction to ensure clean exist(recieves request issues response)
-void *request(UNUSED void *args)
-{
-	BXPService *svc = (BXPService *)args;
-	BXPEndpoint ep;
-	char query[10000];
-	char response[10001];
-	unsigned rlen = 0;
-	unsigned qlen = 0;
-	char *words[25];
-	char out[BUFSIZ];
-	char back[128];
-	BXPConnection bxpc;
-	unsigned port;
-	unsigned backlen;
-
-	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
-	{
-		(void) extractWords(query, "|", words);
-		sscanf(words[1], "%u", &port);
-		bxpc = bxp_connect(words[0], (unsigned short)port, words[2], 1,1);
-		strcpy(out, words[3]);
-		bxp_call(bxpc, out, strlen(out)+1, back, sizeof back, &backlen);
-		bxp_disconnect(bxpc);
-		//the response to send back would be created by sprintf(response," 1%s " , query);
-		//
-		sprintf(response, "%s", query);
-		rlen = strlen(response) +1;
-		bxp_response(svc, &ep, response, rlen);
-	}
-	return NULL;
-}
 //lab 7 callback server extract
 static int extractWords(char *buf, char *sep, char *words[])
 {
@@ -80,6 +47,67 @@ static int extractWords(char *buf, char *sep, char *words[])
 	return i;
 }
 
+//thread fuction to ensure clean exist(recieves request issues response)
+void *request(UNUSED void *args)
+{
+	//jay explain pass and defereance
+	BXPService *svc = (BXPService *)args;
+	BXPEndpoint ep;
+	char query[10000];
+	char response[10001];
+	char *words[25];
+	char out[BUFSIZ];
+	BXPConnection bxpc;
+	unsigned port;
+	unsigned rlen = 0;
+	unsigned qlen = 0;
+
+	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
+	{
+		(void) extractWords(query, "|", words);
+		sscanf(words[1], "%u", &port);
+		bxpc = bxp_connect(words[0], (unsigned short)port, words[2], 1,1);
+		bxp_disconnect(bxpc);
+		//you need to check that the first word in each request is one of the seven legal strings 
+		//("CreateChannel", "DestroyChannel", “ListChannels”, “ListSubscribers”, "Publish",“Subscribe”, “Unsubscribe”) and that the number of arguments is correct. If both are true,
+		//sprintf(response, " 1%s " , query); otherwise,sprintf(response, " 0%s ", query );
+		strcpy(out, words[0]);
+		switch(out[0])
+		{
+			case 'C': 
+					if(strcmp(words[0],"CreateChannel") == 0)
+						sprintf(response, "1%s", query);
+					break;
+			case 'D': 
+					if(strcmp(words[0],"DestroyChannel") == 0)
+						sprintf(response, "1%s", query);
+					break;
+			case 'L': 
+					if(strcmp(words[0],"ListChannels") == 0)
+						sprintf(response, "1%s", query);
+					if(strcmp(words[0],"ListSubscribers") == 0)
+						sprintf(response, "1%s", query);
+					break;
+			case 'P':
+					if(strcmp(words[0],"Publish") == 0)
+						sprintf(response, "1%s", query);
+					break;
+			case 'S': 
+					if(strcmp(words[0],"Subscribe") == 0)
+						sprintf(response, "1%s", query);
+					break;
+			case 'U': 
+					if(strcmp(words[0],"Unsubscribe") == 0)
+						sprintf(response, "1%s", query);
+					break;
+			default:
+					sprintf(response, "0%s", query);
+		}			
+		rlen = strlen(response) +1;
+		bxp_response(svc, &ep, response, rlen);
+	}
+	return NULL;
+}
 
 int main(int argc, char *argv[])
 {
@@ -143,7 +171,7 @@ int main(int argc, char *argv[])
 	fclose(fd);
 	clearchannel = true;
 	fd = NULL;
-	//Initialize the BXP runtime 1 so that it can create and accept encrypted connection requests
+	//Initialize the BXP runtime 1 so that it can create and accept encrypted connection requests lab7
 	assert(bxp_init(port,1));
 	assert((svc = bxp_offer(SERVICE)));
 	//Create a thread that will receive requests from client applications.
