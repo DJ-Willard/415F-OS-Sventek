@@ -1,0 +1,41 @@
+Shared data structures
+======================
+Queue of items; each item has two fields: name, and boolean cancelled
+long active - the number of active items in the queue
+Mutex to enable critical sections with regards to the shared data
+
+Worker thread
+=============
+while there are still active elements in the queue
+    sleep 1 second
+    lock the mutex
+    dequeue element from the queue
+    if item has been cancelled
+        print CANCELLED message
+        return item to heap
+        decrement active
+    else
+        print PROCESSED message
+        enqueue element to the queue
+    unlock the mutex
+terminate the thread
+
+Main thread
+===========
+Create queue
+For number of items
+    allocate item from the heap
+    initialize name and cancelled members of the item
+    store the item in array[]
+    enqueue item in the queue
+    increment active
+create worker thread
+while there are still active elements in the queue
+    compute a random index in [0, sizeof array)
+    sleep 200 ms
+    lock the mutex
+    if array[index] != NULL
+        array[index]->cancelled = true
+        array[index] = NULL
+    unlock the mutex
+join with worker thread

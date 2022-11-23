@@ -1,11 +1,11 @@
 ﻿Name: Daniel Willard
 Duckid: dwillar4
 Current Submission Status:
-	Compiles complete with one inferior process, 4 memory leaks, cant get a print out for redeem vouchers, I have a voucher hang that I cannot fix in the time left. Will try to fix when I get time. Vouchers never get recycled thus I would need to make a massive space. But I have more errors then that since I cant get a print out. Sorry for the difficultly I have made in grading this. 
+	Compiles with no errors not functioning as expected read and read thread end unexceptedly.
 
 Helpers:
 
-Jay Taylor:  developed high minded flow chart idea, helper with syntax issue, supplied web resource for initialization of mutex, Provided understanding to be able to implement all functions using BoundBuffers,
+Jay Taylor:  developed high minded flow chart idea, helper with syntax issue, supplied web resource for initialization of mutex.
 
 Adam Case: Help with debugging, global variable issue. 
 

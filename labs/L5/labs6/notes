@@ -1,0 +1,47 @@
+threads are a register space.
+it has its own stack memery 
+runing in a process
+fork makes process
+
+
+the thread puts the register, pc, and stack
+
+kernal is the data used by fucntions in the kernal 
+it is a set of functions that drive devices and handle device interruts
+set of functions that manage the scarce resources of the computer
+The kernal is Data in memory with veribale data
+
+Thread invokes a system call 
+thread invokes the TRAPinstuctions
+the trap instruction sets the execution mode for your thread to kernal mode
+your thread executes the kernal function for the system call
+
+finally, your thread executes a RTF(return for trap)
+instrctution that causes the thread mode 
+
+interupt saves restiters and pc on the stack
+your thread is execting the interrupt
+
+
+project 2 you have 5 public functions to call
+
+b/u write  b/u read and voucher
+
+inzitialaztion 
+
+may need to make threads to create concerency and then must unite witht he programm.
+
+data structre may be needed.
+
+50 linies of code is what you need 
+
+pthread laibary (mutex crictial region)
+
+assume single processor everything is serial 
+
+Need to know how to write code with no understaning what people are doing above you and below you.
+
+
+you work in a team  with poeple above and below.
+
+Take 432, 431 concurrent progaming. 433, cyber securtity.
