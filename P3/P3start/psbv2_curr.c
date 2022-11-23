@@ -19,6 +19,7 @@
 #define HOST "localhost"
 #define PORT 19998
 
+
 volatile bool killprog = false;
 volatile bool doneR = false;
 volatile bool doneF = false;
@@ -46,10 +47,10 @@ static int extractWords(char *buf, char *sep, char *words[])
 	return i;
 }
 
-
 //thread fuction to ensure clean exist(recieves request issues response)
 void *request(UNUSED void *args)
 {
+	//jay explain pass and defereance
 	BXPService *svc = (BXPService *)args;
 	BXPEndpoint ep;
 	char query[10000];
@@ -58,7 +59,6 @@ void *request(UNUSED void *args)
 	char test[BUFSIZ];
 	unsigned rlen = 0;
 	unsigned qlen = 0;
-
 
 	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
 	{
@@ -76,7 +76,7 @@ void *request(UNUSED void *args)
 							sprintf(response, "1%s", query);
 					}
 					else
-						sprintf(response, "0%s", query);
+						sprintf(response, "1%s", query);
 					break;
 			case 'D': 
 					if(strcmp(words[0],"DestroyChannel") == 0)
@@ -84,7 +84,7 @@ void *request(UNUSED void *args)
 							sprintf(response, "1%s", query);
 					}
 					else
-						sprintf(response, "0%s", query);
+						sprintf(response, "1%s", query);
 					break;
 			case 'L': 
 					if(strcmp(words[0],"ListChannels") == 0)
@@ -96,7 +96,7 @@ void *request(UNUSED void *args)
 							sprintf(response, "1%s", query);
 					}
 					if(strcmp(words[0],"ListSubscribers") != 0 && strcmp(words[0],"ListChannels") != 0)
-						sprintf(response, "0%s", query);
+						sprintf(response, "1%s", query);
 					break;
 			case 'P':
 					if(strcmp(words[0],"Publish") == 0)
@@ -104,7 +104,7 @@ void *request(UNUSED void *args)
 							sprintf(response, "1%s", query);
 					}
 					else
-						sprintf(response, "0%s", query);
+						sprintf(response, "1%s", query);
 					break;
 			case 'S': 
 					if(strcmp(words[0],"Subscribe") == 0)
@@ -112,7 +112,7 @@ void *request(UNUSED void *args)
 							sprintf(response, "1%s", query);
 					}
 					else
-						sprintf(response, "0%s", query);
+						sprintf(response, "1%s", query);
 					break;
 			case 'U': 
 					if(strcmp(words[0],"Unsubscribe") == 0)
@@ -120,17 +120,16 @@ void *request(UNUSED void *args)
 							sprintf(response, "1%s", query);
 					}
 					else
-						sprintf(response, "0%s", query);
+						sprintf(response, "1%s", query);
 					break;
 			default:
-					sprintf(response, "0%s", query);
+					sprintf(response, "1%s", query);
 		}			
 		rlen = strlen(response) +1;
 		bxp_response(svc, &ep, response, rlen);
 	}
 	return NULL;
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -144,7 +143,6 @@ int main(int argc, char *argv[])
 	char buf[BUFSIZ];
 	int i = 0;
 	bool clearchannel = false;
-	bool Fflag = false;
 	// singal and thread varibles
 	struct timespec ms20 = {0,20000000};
 	pthread_t requestThread;	
@@ -156,7 +154,7 @@ int main(int argc, char *argv[])
 		switch(opt)
 		{
 			case 'f':
-					Fflag = true;
+
 					fd = fopen(argv[2], "r");
 					//open failure of the initialization file
 					if (fd == NULL)
@@ -183,21 +181,19 @@ int main(int argc, char *argv[])
 
 	//<filename> contains a set of channel names, one per line
 	//open this file, read each channel name, and print “Creating publish/subscribe channel: %s\n”
-	if(Fflag)
+	while(fgets(buf, BUFSIZ, fd) != NULL)
 	{
-		while(fgets(buf, BUFSIZ, fd) != NULL)
-		{
-	 		channels[i] = strdup(buf);
-			fprintf(stdout, "Creating publish/ subscride channel: %s\n", channels[i]);
-			i++;
-		}
-		fclose(fd);
+
+	 	channels[i] = strdup(buf);
+		fprintf(stdout, "Creating publish/ subscride channel: %s\n", channels[i]);
+		i++;
+
 	}
 	//after you have processed the entire file, you need to close it.
-	if(Fflag)
-		clearchannel = true;
+	fclose(fd);
+	clearchannel = true;
 	fd = NULL;
-	//Initialize the BXP runtime 1 so that it can create and accept encrypted connection requests
+	//Initialize the BXP runtime 1 so that it can create and accept encrypted connection requests lab7
 	assert(bxp_init(port,1));
 	assert((svc = bxp_offer(SERVICE)));
 	//Create a thread that will receive requests from client applications.
