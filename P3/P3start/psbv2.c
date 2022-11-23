@@ -56,49 +56,71 @@ void *request(UNUSED void *args)
 	char query[10000];
 	char response[10001];
 	char *words[25];
-	char out[BUFSIZ];
-	BXPConnection bxpc;
-	unsigned port;
+	char test[BUFSIZ];
 	unsigned rlen = 0;
 	unsigned qlen = 0;
 
 	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
 	{
 		(void) extractWords(query, "|", words);
-		sscanf(words[1], "%u", &port);
-		bxpc = bxp_connect(words[0], (unsigned short)port, words[2], 1,1);
-		bxp_disconnect(bxpc);
 		//you need to check that the first word in each request is one of the seven legal strings 
 		//("CreateChannel", "DestroyChannel", “ListChannels”, “ListSubscribers”, "Publish",“Subscribe”, “Unsubscribe”) and that the number of arguments is correct. If both are true,
 		//sprintf(response, " 1%s " , query); otherwise,sprintf(response, " 0%s ", query );
-		strcpy(out, words[0]);
-		switch(out[0])
+		strcpy(test, words[0]);
+
+		switch(test[0])
 		{
 			case 'C': 
 					if(strcmp(words[0],"CreateChannel") == 0)
-						sprintf(response, "1%s", query);
+					{
+							sprintf(response, "1%s", query);
+					}
+					else
+						sprintf(response, "0%s", query);
 					break;
 			case 'D': 
 					if(strcmp(words[0],"DestroyChannel") == 0)
-						sprintf(response, "1%s", query);
+					{
+							sprintf(response, "1%s", query);
+					}
+					else
+						sprintf(response, "0%s", query);
 					break;
 			case 'L': 
 					if(strcmp(words[0],"ListChannels") == 0)
-						sprintf(response, "1%s", query);
+					{
+							sprintf(response, "1%s", query);
+					}
 					if(strcmp(words[0],"ListSubscribers") == 0)
-						sprintf(response, "1%s", query);
+					{
+							sprintf(response, "1%s", query);
+					}
+					if(strcmp(words[0],"ListSubscribers") != 0 && strcmp(words[0],"ListChannels") != 0)
+						sprintf(response, "0%s", query);
 					break;
 			case 'P':
 					if(strcmp(words[0],"Publish") == 0)
-						sprintf(response, "1%s", query);
+					{
+							sprintf(response, "1%s", query);
+					}
+					else
+						sprintf(response, "0%s", query);
 					break;
 			case 'S': 
 					if(strcmp(words[0],"Subscribe") == 0)
-						sprintf(response, "1%s", query);
+					{
+							sprintf(response, "1%s", query);
+					}
+					else
+						sprintf(response, "0%s", query);
 					break;
 			case 'U': 
 					if(strcmp(words[0],"Unsubscribe") == 0)
-						sprintf(response, "1%s", query);
+					{
+							sprintf(response, "1%s", query);
+					}
+					else
+						sprintf(response, "0%s", query);
 					break;
 			default:
 					sprintf(response, "0%s", query);
