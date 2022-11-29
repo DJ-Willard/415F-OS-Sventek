@@ -1,5 +1,18 @@
+/*
+Authorship Statement
+Daniel Willard
+dwillar4
+CIS 415 project 3
+This is my own work expect form bxp code form lab 7 in my request thread and extract words function form lab 7
+and the adts form the school libary. the sortalpha function neccessity was explained by adam case implemented by me, 
+*/
 #include "BXP/bxp.h" // for bxp
-#include "ADTs/arrayqueue.h" //adt for array queue
+#include "ADTs/arrayqueue.h" //adt for array queue 
+#include "ADTs/hashcskmap.h" //hash map for channels Recommened by adam for v3
+#include "ADTs/queue.h" //adt for  queue 
+#include "ADTs/stringADT.h" // for publish
+#include "ADTs/iterator.h" // 
+#include "sort.h" //alphabetical sort givenS
 #include <valgrind/valgrind.h> // memory cheack
 #include <pthread.h> // for p threads
 #include <assert.h> // for assert
@@ -13,17 +26,70 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+//marcos
 #define USAGE "Usage: ./psbv? [-f <filename>]"
 #define UNUSED __attribute__((unused))
 #define SERVICE "PSB"
 #define HOST "localhost"
 #define PORT 19998
+#define MAX_CHANNELS
 
+//global varibles
+unsigned long SVID = 0;
+unsigned long CHID = 0;
+
+//volatile data
 volatile bool killprog = false;
 volatile bool doneR = false;
 volatile bool doneF = false;
 
-pthread_mutex_t lockR = PTHREAD_MUTEX_INITIALIZER;
+// pthread data
+pthread_mutex_t lockP = PTHREAD_MUTEX_INITIALIZER;
+
+//data structure of requests of PSB
+typedef struct chData{
+	char *name; // channel name
+	unsigned long  chid; //channel id 
+	unsigned long  **subs; // list of
+	int numsubs;
+	bool cancalled; // list to die.
+	//lock conditional will be needed
+}CHData;
+
+typedef struct subData{
+	unsigned long *svid;
+	unsigned long *clid;
+	char *host;
+	char *service;
+	unsigned short *port;
+}SUBData;
+
+//helper function to free data in structure
+void freeCHData(void *chData)
+{
+	CHData *tmp = (CHData *)chData;
+	if(tmp->name != NULL)
+		free(tmp->name);
+	if(tmp->subs != NULL)
+		for(int i = 0; i < tmp->numsubs; i++)
+		{
+			free(tmp->subs[i]);
+		}
+	free(chData);
+}
+
+int sortAlpha(void *v1, void *v2)
+{
+	char *a1 = (char *) v1;
+	char *a2 = (char *) v2;
+
+	return strcmp(a1, a2);	
+}
+
+//adt's for subscriptions and channels
+//ADT queues intances
+const CSKMap *subTracker;
+const Queue *CHQueue;
 
 //form lab 4 SIGINT handler
 static void onint(UNUSED int sig)
@@ -45,9 +111,26 @@ static int extractWords(char *buf, char *sep, char *words[])
 	words[i] = NULL;
 	return i;
 }
+//helper function 
+// bool createCH(char *name)
+// {
+// 	CHData *chData = (CHData *)malloc(sizeof (CHData));
+// 	if(chData == NULL)
+// 		return false;
 
+// 	chData->chid = CHID;
+// 	CHID++;
+// 	chData->name = name;
+// 	if(CHQueue->enqueue(CHQueue, (void *) chData))
+// 		return true;
+// 	return false;
+// }
 
-
+//helper thread to publish 
+// void *publishCh(UNUSED void *args)
+// {
+// 	return NULL;
+// }
 
 //thread fuction to ensure clean exist(recieves request issues response)
 void *request(UNUSED void *args)
@@ -55,28 +138,34 @@ void *request(UNUSED void *args)
 	BXPService *svc = (BXPService *)args;
 	BXPEndpoint ep;
 	char query[10000];
-	char queryDble[10000];
 	char response[10001];
+	char reply[10000];
+	char queryDble[10000];
 	char *words[25];
+	char *CHlist[BUFSIZ];
 	char test[BUFSIZ];
 	unsigned rlen = 0;
 	unsigned qlen = 0;
-	int arglen = 0;
+	int arglen = 0; 
+	long chQlen =0;
 
+	//subTracker =  HashCSKMap(0L, (double) 0, freeCHData);
+	CHQueue = Queue_create(freeCHData);
 
 	while((qlen = bxp_query(svc, &ep, query, 10000))> 0)
 	{
+
 		assert(query != NULL);
 		strcpy(queryDble, query);
 		(void) extractWords(queryDble, "|", words);
-		//you need to check that the first word in each request is one of the seven legal strings 
-		//("CreateChannel", "DestroyChannel", “ListChannels”, “ListSubscribers”, "Publish",“Subscribe”, “Unsubscribe”) and that the number of arguments is correct. If both are true,
-		//sprintf(response, " 1%s " , query); otherwise,sprintf(response, " 0%s ", query );
+
 		for(int i = 0; words[i] != NULL; i++)
 		{
 			arglen = i;
 		}
 		strcpy(test, words[0]);
+
+
 
 		switch(test[0])
 		{
@@ -84,7 +173,16 @@ void *request(UNUSED void *args)
 					if(strcmp(words[0],"CreateChannel") == 0)
 					{
 						if(arglen == 1)
-							sprintf(response, "1%s", query);
+						{
+							CHData *chData = (CHData *)malloc(sizeof (CHData));
+							chData->chid = CHID;
+							CHID++;
+							if(words[1][strlen(words[1])-1] == '\n')
+								words[1][strlen(words[1])-1] = '\0';
+							chData->name = words[1];
+							if(CHQueue->enqueue(CHQueue, (void *) chData))
+								sprintf(response, "1%08lu",chData->chid);
+						}
 						break;
 					}
 
@@ -101,10 +199,29 @@ void *request(UNUSED void *args)
 					sprintf(response, "0%s", query);
 					break;
 			case 'L': 
+					if(words[0][strlen(words[0])-1] == '\n')
+						words[0][strlen(words[0])-1] = '\0';
 					if(strcmp(words[0],"ListChannels") == 0)
 					{
 						if(arglen == 0)
-							sprintf(response, "1%s", query);
+						{
+							CHData **array;
+							array = (CHData **) CHQueue->toArray(CHQueue, &chQlen);
+
+							for(int i = 0; i < chQlen; i++)
+							{
+								CHlist[i] = (char *)(array[i]->name);
+							}
+							
+							sort((void *) CHlist[chQlen], chQlen, sortAlpha);
+							for(int i = 0; i < chQlen; i++)
+							{
+								strcat(reply, CHlist[i]);
+								strcat(reply, ", ");
+							}
+							free(array);
+							sprintf(response, "1%s", reply);		
+						}
 						break;
 					}
 
@@ -147,7 +264,8 @@ void *request(UNUSED void *args)
 					break;
 			default:
 					sprintf(response, "0%s", query);
-		}			
+		}
+
 		rlen = strlen(response) +1;
 		bxp_response(svc, &ep, response, rlen);
 	}
@@ -159,18 +277,22 @@ int main(int argc, char *argv[])
 {
 	//varribles for BXP
 	BXPService svc;
-	char *channels[1000];
 	int port = PORT;
 	//varibles for file handling
 	FILE *fd = NULL;
-	int opt;
+	char *channels[BUFSIZ];
 	char buf[BUFSIZ];
+	int opt;
 	int i = 0;
+	int j = 0;
 	bool clearchannel = false;
 	bool Fflag = false;
 	// singal and thread varibles
 	struct timespec ms20 = {0,20000000};
-	pthread_t requestThread;	
+	pthread_t requestThread;
+	//pthread_t publishChThread;	
+
+	CHQueue = Queue_create(freeCHData);
 
 	//step 1 open file and read then close
 	//Check the arguments provided; if “-f <filename>” use getopt
@@ -200,6 +322,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	assert(bxp_init(port,1));
+	assert((svc = bxp_offer(SERVICE)));
 	//error handling: Except for initialization failure,open failure of the initialization file, and 
 	//receipt of an INT signal, PSBv1 should never exit.
 	signal(SIGINT,onint);
@@ -210,21 +334,30 @@ int main(int argc, char *argv[])
 	{
 		while(fgets(buf, BUFSIZ, fd) != NULL)
 		{
-	 		channels[i] = strdup(buf);
+			channels[i] = strdup(buf);
 			fprintf(stdout, "Creating publish/ subscride channel: %s\n", channels[i]);
 			i++;
 		}
 		fclose(fd);
-	}
-	//after you have processed the entire file, you need to close it.
-	if(Fflag)
+		for(int i = 0; i < j; i++)
+		{
+			CHData *chData = (CHData *)malloc(sizeof (CHData));
+			chData->chid = CHID;
+			CHID++;
+			chData->name = channels[i];
+			CHQueue->enqueue(CHQueue, (void *) chData);
+		}
 		clearchannel = true;
-	fd = NULL;
+		fd = NULL;
+	}
+
 	//Initialize the BXP runtime 1 so that it can create and accept encrypted connection requests
-	assert(bxp_init(port,1));
-	assert((svc = bxp_offer(SERVICE)));
+	//assert(bxp_init(port,1));
+	//assert((svc = bxp_offer(SERVICE)));
 	//Create a thread that will receive requests from client applications.
 	assert(! pthread_create(&requestThread,NULL, request, (void *) svc));
+	//assert(! pthread_create(&publishChThread, NULL, publishCh, NULL));
+
 
 //wait for CTRL-C form lab 4
 	while(!killprog)
@@ -235,6 +368,8 @@ int main(int argc, char *argv[])
 
 //cleanup close open file.
 	cleanup:
+		if(CHQueue != NULL)
+			CHQueue->destroy(CHQueue);
 		if(fd != NULL)
 			fclose(fd);
 		if(clearchannel)

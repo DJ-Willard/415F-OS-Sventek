@@ -1,3 +1,10 @@
+/*
+Authorship Statement
+Daniel Willard
+dwillar4
+CIS 415 project 3
+This is my own work expect form bxp code form lab 7 in my request thread and extract words function form lab 7
+*/
 #include "BXP/bxp.h" // for bxp
 #include "ADTs/arrayqueue.h" //adt for array queue
 #include <valgrind/valgrind.h> // memory cheack
