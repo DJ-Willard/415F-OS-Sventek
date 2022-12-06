@@ -1,0 +1,18 @@
+DuckID: dwillar4
+Name: Daniel Willard
+
+Current Status: barley implemented was unable complete.
+not tested, not run, just stared working though and up what i could hastly come up with on paper.  
+Structures guess at;
+create unsure how to get into the image file correctly
+destroy because structure is not correct dont know what to free. 
+
+
+wanted to complete will work on over break.
+Really wanted to be able ot complete. going to work over weekend to seee if i can get further.
+
+student status: disappointed in self and burnt out.
+
+Helper:
+
+Erin Stone: Talked over genral set up for structure and hight level understanding working through  union pdf and the handout.
