@@ -1,4 +1,4 @@
-CFLAGS=-W -Wall -I/usr/local/include -g
+CFLAGS=-W -Wall -I/usr/local/include -g -DDEBUG
 LDFLAGS=-L/usr/local/lib -g
 PROGRAMS=psbv1 psbv2 psbv3 psbv4 echoclient subscriber publisher listchannels listsubscribers
 LIBRARIES=-lBXP -lpthread -lADTs
@@ -14,7 +14,7 @@ psbv2: psbv2.o
 psbv3: psbv3.o sort.o
 	gcc $(LDFLAGS) -o $@ $^ $(LIBRARIES)
 
-psb4: psb4.o sort.o
+psb4: psbv4.o sort.o
 	gcc $(LDFLAGS) -o $@ $^ $(LIBRARIES)
 
 echoclient: echoclient.o

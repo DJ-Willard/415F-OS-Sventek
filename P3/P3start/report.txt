@@ -1,0 +1,15 @@
+Duck ID: dwillar4
+Name: Daniel Willard
+
+PSBv1: Tested, working correctly to the best of my knowlegde, doesn't pass valgrind there are still reachable data I belive the data to be lost in bxp.
+PSBv2: Tested, working correctly to the best of my knowlegde, doesn't pass valgrind there are still reachable data I belive the data to be lost in bxp.
+PSBv3: implemented create channel, funstional mostly, doesn't take in data form .psbrc no test for error. list channel unable to get working. nothing functionally yet there are probaly memory leaks everywhere.
+PSbv4: unattempted
+
+
+Helpers:
+
+Adam case: debug help on v3, Explined how to use Hash CSK adt in v3. provided a v1 test code
+James Taylor (Jay): explained tested for v3. 
+Erin Stone: helped with v2 helped with parseing words, ponted out that extract words destroys structure. 
+Professor Joe Sventek: code form lab 7,8 and also explained that SIGINT needed a pthread close.
